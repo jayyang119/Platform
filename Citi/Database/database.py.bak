@@ -1,6 +1,6 @@
 from Crawler import REPORT_TYPE_DICT
 from uti import timeit, DataLoader, Logger
-from Path import DATABASE_PATH, ONEDRIVE_PATH, BASE_PATH
+from Path import DATABASE_PATH, ONEDRIVE_PATH
 from Database.rating_change import tpc_scanner, rc_scanner, rating_scanner
 
 import os

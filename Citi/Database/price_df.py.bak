@@ -4,13 +4,15 @@ import numpy as np
 from datetime import datetime, timedelta
 
 from uti import DataLoader, Logger
+from Eikon import Eikon_update_price_enhanced
 from library import Dataset
 from Model import DataCleaner, benchmark_expectancy
 from Broker import ricsregion
+from Backtest import BacktestEngine, get_expectancy
 from Crawler import REPORT_TYPE_GLOBAL_DICT
 
-DC = DataCleaner()
 DL = DataLoader()
+DC = DataCleaner()
 logger = Logger()
 DATABASE_PATH = DL.database_path
 NOW_STR = logger.NOW_STR
@@ -22,7 +24,7 @@ class GSPriceDf:
 
     def add_new_columns(self, _df):
         df = _df.copy(deep=True)
-        df['Sector'] = df[['Ticker']].replace({'Ticker': self._valid_tickers_dict['Industry']})
+        df['Sector'] = df[['ticker']].replace({'ticker': self._valid_tickers_dict['Industry']})
         df = ricsregion(df)
 
         df['atr'] = 0.00
@@ -61,6 +63,7 @@ class GSPriceDf:
         column_index_dict['gap'] = price_df_columns.index('gap')
         column_index_dict['volume_d_10_sma'] = price_df_columns.index('volume_d_10_sma')
 
+
         for D in range(-1, 3):
             if D == -1:
                 column_index_dict[f"prev1_date"] = price_df_columns.index(f"prev1_date")
@@ -78,11 +81,10 @@ class GSPriceDf:
         self._valid_tickers = DL.loadTickers()
         self._valid_tickers_dict = self._valid_tickers.set_index('Ticker(old)').to_dict()
 
-    def get_sentiment_df(self, file='GS_sentiment'):
+    def get_sentiment_df(self, file='Citi sentiment'):
         logger.info(f'Getting {file}')
-        df = DL.loadDB(f'{file}.csv', parse_dates=(['Date', 'Time']))
-        df = df[df['Asset Class'].isin(['Equity'])]
-        df = df[df['Ticker'].isin(self._valid_tickers['Ticker(old)'])].reset_index(drop=True)
+        df = DL.loadDB(f'{file}.csv', parse_dates=(['Date', 'Time']))  # , parse_dates=(['Time'])
+        # df = df[df['ticker'].isin(self._valid_tickers['Ticker(old)'])].reset_index(drop=True)
         return df
 
     def update_price(self, _df):
@@ -95,8 +97,11 @@ class GSPriceDf:
         for i, row in df.iterrows():
             try:
                 date = row['date_local']
-                ticker = row['Ticker']
+                ticker = row['ticker']
                 data = DL.loadDaily(self._valid_tickers_dict['ticker'][ticker])
+
+                if len(data) == 0:
+                    continue
 
                 data_date0_index = list(data.index).index(data.loc[date:].index[0])
                 if row['release_period'] == 'After':
@@ -127,10 +132,10 @@ class GSPriceDf:
                     logger.info(f'Line {i} {ticker} completed.')
 
             except Exception as e:
-                logger.error(row['Ticker'])
-                errors.append(row['Ticker'])
+                logger.error(row['ticker'])
+                errors.append(row['ticker'])
                 errors_log.append(e)
-        anomalies_df = pd.DataFrame({'Ticker': errors, 'Log': errors_log})
+        anomalies_df = pd.DataFrame({'ticker': errors, 'Log': errors_log})
 
         if len(anomalies_df) > 0:
             filename = f'Log/{NOW_STR[:8]}/Anomalies_MC_{NOW_STR[8:]}.csv'
@@ -140,7 +145,7 @@ class GSPriceDf:
             logger.info('All tickers completed without anomalies.')
 
         logger.info(df)
-        df = df[df['atr_used'] != 0].copy()
+        df = df[df['atr_used'] != 0].copy(deep=True)
         df['gap_in_atr'] = df['gap'] / df['atr_used']
         df['gap_in_atr'] = pd.to_numeric(df['gap_in_atr'])
         return df
@@ -148,59 +153,44 @@ class GSPriceDf:
     def GS_update_price_df(self, update=False):
         self.get_valid_tickers_dict()
         self._sentiment_df = self.get_sentiment_df()
+        # self._sentiment_df = self.get_sentiment_df('Citi sentiment with us')
+        # self._sentiment_df = self._sentiment_df[self._sentiment_df['ticker'].isin(self._valid_tickers['Ticker(old)'].values)].reset_index(drop=True)
 
         if not DL.checkDB('price_df.csv'):
             logger.info('Regenerating price_df.csv')
-
-            if update is True:
-                tickers_tbu = np.unique(self._sentiment_df['Ticker'].replace(self._valid_tickers_dict['Ticker']))
-                # tickers_in_db = os.listdir(f'{DATABASE_PATH}/Daily')
-                # tickers_in_db = [x.rstrip('.csv') for x in tickers_in_db]
-                # tickers_tbu = list(set(tickers_tbu) - set(tickers_in_db))
-                # print(tickers_tbu)
-                len_tickers_tbu = str(len(tickers_tbu))
-                order = input(f'Total length of tickers tbu {len_tickers_tbu}, continue? (y/n)')
-                if order.lower() == 'y':
-                    from Eikon import Eikon_update_price_enhanced
-                    Eikon_update_price_enhanced(tickers_tbu, threadcount=16)
-
             self._price_df = self.update_price(self._sentiment_df)
-
         else:
             logger.info('Updating price_df.csv')
             price_df_tbu = self.get_sentiment_df('price_df')
 
             price_df = price_df_tbu[price_df_tbu['d2_open'] != 0]
             price_df_tbu = price_df_tbu[price_df_tbu['d2_open'] == 0]
-
             price_df_new = pd.concat([self._sentiment_df, price_df[self._sentiment_df.columns]], axis=0).drop_duplicates(
-                ['Time', 'Headline'], keep=False)
-
+                ['Time', 'headline'], keep=False)
             price_df_tbu = pd.concat([price_df_new, price_df_tbu], axis=0)
             price_df_tbu = self.add_new_columns(price_df_tbu)
             logger.info(price_df_tbu)
+            input('Continue?')
 
             if update is True:
-                tickers_tbu = np.unique(price_df_tbu['Ticker'].fillna('').replace(self._valid_tickers_dict['ticker']))
+                tickers_tbu = np.unique(price_df_tbu['ticker'].replace(self._valid_tickers_dict['ticker']))
+
+                # Add exchange rates, VIX, index, index futures
                 logger.info(tickers_tbu)
                 len_tickers_tbu = str(len(tickers_tbu))
                 order = input(f'Total length of tickers tbu {len_tickers_tbu}, continue? (y/n)')
                 if order.lower() == 'y':
-                    from Eikon import Eikon_update_price_enhanced
                     Eikon_update_price_enhanced(tickers_tbu, threadcount=16)
                 # Eikon_update_price(tickers_tbu)
 
             price_df_tbu = self.update_price(price_df_tbu)
-            logger.info(price_df)
             logger.info(price_df_tbu)
-
             self._price_df = pd.concat([price_df_tbu[price_df.columns], price_df], axis=0).reset_index(drop=True)
 
-        self._price_df = self._price_df.sort_values('Date', ascending=False)
+        self._price_df = self._price_df.sort_values('Time', ascending=False)
         self._price_df = self._price_df.drop_duplicates()
 
         DL.toDB(self._price_df, 'price_df.csv')
-
         DC = DataCleaner()
         DC.get_benchmark_test_data(update=True)
 
@@ -210,23 +200,21 @@ class GSPriceDf:
         id_mc = list(df.columns).index('market_cap_usd')
         for i, row in df.iterrows():
             try:
-                ticker = row['Ticker']
+                ticker = row['ticker']
                 data = DL.loadDaily(self._valid_tickers_dict['ticker'][ticker])
 
                 df.iat[i, id_mc] = data['MarketCap'][-1]
             except:
-                logger.error(row['Ticker'])
+                logger.error(row['ticker'])
+        logger.info(df)
+        print(df.columns)
         df = DC.preprocess_trade_df(df)
         return df
 
     def GS_predict_price_df(self, days=3):
         self.get_valid_tickers_dict()
-        # self._sentiment_df = DL.loadDB('GS_sentiment.csv', parse_dates=(['Date', 'Time']))
-        # self._sentiment_df = self._sentiment_df[self._sentiment_df['Asset Class'].isin(['Equity'])]
         self._sentiment_df = self.get_sentiment_df()
 
-        # date-local - today release_period - before
-        # date_local - yesterday release_period - after    # filter out date_local - yesterday, release_period before
         now = datetime.today()
         end = datetime.date(datetime(now.year, now.month, now.day))
         start = end - timedelta(days=days)
@@ -236,67 +224,103 @@ class GSPriceDf:
         self._sentiment_df['Date'] = self._sentiment_df['Date'].apply(lambda x: x.date())
         self._sentiment_df = self.add_new_columns(self._sentiment_df)
 
-        price_df = self._sentiment_df[self._sentiment_df['date_local'].isin(date_range)].copy(deep=True)
-        price_df = price_df[price_df['release_period'].isin(['After', 'Within', 'Before'])].reset_index(drop=True)
-        start_after = (price_df['date_local'] == start) & (price_df['release_period'] == 'After')
-        print(start)
-        logger.info(price_df.loc[start_after])
-        logger.info(price_df.loc[price_df['date_local'] > start])
-        price_df = price_df.loc[start_after | (price_df['date_local'] > start)].reset_index(drop=True)  # Filter out start day
+        results = self._sentiment_df[self._sentiment_df['date_local'].isin(date_range)].copy(deep=True)
+        # results = results[results['release_period'].isin(['After', 'Within', 'Before'])].reset_index(drop=True)
+        start_after = (results['date_local'] == start) & (results['release_period'] == 'After')
+        results = results.loc[start_after | (results['date_local'] > start)].reset_index(drop=True)
 
         DC = DataCleaner()
-        price_df = self.update_market_cap(price_df)
-        price_df = DC.preprocess_trade_df(price_df)
+        results = self.update_market_cap(results)
+        results = DC.preprocess_trade_df(results)
 
-        train_data, test_data = DC.get_benchmark_test_data()
-        train_data = pd.concat([train_data, test_data], axis=0).reset_index(drop=True)
-
-        results = benchmark_expectancy(sort_by='exch_region', train_data=train_data, test_data=price_df)
+        logger.info(results)
+        results = benchmark_expectancy(test_data=results)
         results.sort_values('Time', ascending=False, inplace=True)
         today_str = datetime.strftime(datetime.today(), '%Y%m%d')
 
         results = results.drop(['volume_d_10_sma', 'prev1_open', 'prev1_high', 'prev1_low', 'prev1_close', 'gap',
                                 'd0_date', 'd0_open', 'd0_high', 'd0_low', 'd0_close', 'd1_date', 'd1_open', 'd1_high',
-                                'd1_low', 'd1_close',
-                                'd2_date', 'd2_open', 'd2_high', 'd2_low', 'd2_close',
-                                'prev1_date', 'ticker', 'atr', 'atrx', 'atr_used', 'ticker_updated', 'No. of trades'], axis=1)
+                                'd1_low', 'd1_close', 'd2_date', 'd2_open', 'd2_high', 'd2_low', 'd2_close',
+                                'prev1_date', 'atr', 'atrx', 'atr_used', 'ticker_updated'], axis=1)
 
-        results['rating_curr'] = None
-        results['rating_prev'] = None
-        results['tp_curr'] = None
-        results['tp_prev'] = None
-        results['tp_chg_pct'] = None
-        results['up_or_down_side_pct'] = None
-        # results['d0_exp'] = None
-        results['d1_exp'] = None
-        results['d2_exp'] = None
-        results['top_analyst_long'] = None
-        results['top_analyst_short'] = None
-        results['analyst_pri'] = None
+        print(results.columns)
 
-        results['broker'] = 'Goldman'
-        results['Ticker(BBG)'] = results['Ticker'].replace(self._valid_tickers_dict['Ticker(BBG)'])
-        results['Report Type Global'] = results['Report Type'].replace(REPORT_TYPE_GLOBAL_DICT)
+        results['up_or_down_side_pct'] = ''
+        results['d1_exp'] = ''
+        results['d2_exp'] = ''
+        results['broker'] = 'Citigroup'
+        results = results.rename(columns={'analyst_pri': 'analyst_pri', 'tp_curr': 'tp_curr', 'tp_prev': 'tp_prev',
+                                          'deltaTPS%': 'tp_chg_pct'})
+        results['ticker'] = results['ticker'].replace(self._valid_tickers_dict['ticker'])
+        results['Ticker(BBG)'] = results['ticker'].replace(self._valid_tickers_dict['Ticker(BBG)'])
+        results['report_type_global'] = results['report_type'].replace(REPORT_TYPE_GLOBAL_DICT)
 
         results = results[
-            ['broker', 'Ticker(BBG)', 'date_local', 'release_period', 'side', 'Report Type', 'Report Type Global', 'Sector',
-             'Headline sentiment', 'Summary sentiment', 'Headline', 'Summary',
+            ['broker', 'Ticker(BBG)', 'date_local', 'release_period', 'side', 'report_type', 'report_type_global', 'Sector',
+             'headline_senti', 'summary_senti', 'headline', 'summary',
              'rating_curr', 'rating_prev', 'tp_curr', 'tp_prev', 'tp_chg_pct', 'up_or_down_side_pct',
-             'Expectancy', 'd1_exp', 'd2_exp', 'Expectancy (blind long)', 'Expectancy (blind short)',
-             'top_analyst_long', 'top_analyst_short', 'analyst_pri', 'exch_location', 'exch_region', 'Ticker', 'Time',  'market_cap_grp']]
+             'd0_exp', 'd1_exp', 'd2_exp', 'Expectancy (blind long)', 'Expectancy (blind short)',
+             'top_analyst_long', 'top_analyst_short', 'analyst_pri', 'exch_location', 'exch_region', 'ticker', 'tickers', 'Time', 'market_cap_grp',
+             'analyst_pri_score', 'ticker_score', 'release_period_score', 'report_type_score']]
 
-        DL.toDB(results, f'GS daily prediction {today_str}.csv')
+        DL.toDB(results, f'Citi daily prediction {today_str}.csv')
 
-        return price_df
-
+        return results
 
 if __name__ == '__main__':
     GSP = GSPriceDf()
     # df = GSP.GS_update_price_df(update=False)
+
     # DL.toDB(df, 'price_df.csv')
-    GSP.GS_update_price_df(update=True)
-    # if datetime.today().weekday() == 0:
-    #     backfill_days = 3
-    # else:
-    #     backfill_days = 1
-    # price_df = GSP.GS_predict_price_df(days=backfill_days)
+    # price_df = DL.loadDB('price_df.csv')
+    # price_df = ricsregion(price_df)
+    # DS = Dataset(price_df)
+    # DS.clean(mode='eikon')
+    # price_df = DS.df.copy(deep=True)
+    #
+    # DL.toDB(price_df, 'price_df_us.csv')
+
+    # GSP.GS_update_price_df(update=False)
+    # GSP.GS_update_price_df()
+    if datetime.today().weekday() == 0:
+        backfill_days = 3
+    else:
+        backfill_days = 1
+    price_df = GSP.GS_predict_price_df(days=backfill_days)
+    # price_df = GSP.GS_predict_price_df(days=4)
+    # price_df = GSP.GS_predict_price_df(days=30)  # Catalyst watch case study
+    # import glob
+    # import json
+    # import flatten_json
+    # path = r"C:\Users\JayYang\OneDrive - Alpha Sherpa Capital\Citi\Database\*.json"
+    # files = glob.glob(path)
+    # citi = []
+    # for file in files:
+    #     f = open(file, encoding='utf8')
+    #     data = json.load(f)
+    #     data = data['list']
+    #     data = [flatten_json(each) for each in data]
+    #     df1 = pd.DataFrame(data)
+    #     citi.append(df1)
+    #     f.close()
+    #
+    # df = pd.concat(citi).reset_index(drop=True)
+    # df = df[['headline', 'pubDate', 'OBOPreferredName', 'synopsis',
+    #          'tickers', 'regions', 'sectors', 'company', 'assetClass',
+    #          'subject', 'pubId']]
+    # df = df.rename(columns={"pubDate": "Time",
+    #                         "OBOPreferredName": "Head analyst",
+    #                         "synopsis": "Summary",
+    #                         "tickers": "Ticker",
+    #                         "subject": "report_type",
+    #                         "headLine": "Headline",
+    #                         "regions": "Region",
+    #                         "sectors": "Industry"
+    #                         })
+    #
+    # df = df.dropna(subset=['ticker'])
+    # df['ticker'] = df['ticker'].apply(lambda x: x.split(',')[0])
+    # Eikon_update_price_enhanced(df['ticker'].unique())
+
+
+

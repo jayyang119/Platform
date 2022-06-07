@@ -4,7 +4,6 @@ import numpy as np
 from datetime import datetime, timedelta
 
 from uti import DataLoader, Logger
-from Eikon import Eikon_update_price_enhanced
 from library import Dataset
 from Model import DataCleaner, benchmark_expectancy
 from Broker import ricsregion
@@ -180,6 +179,7 @@ class GSPriceDf:
                 len_tickers_tbu = str(len(tickers_tbu))
                 order = input(f'Total length of tickers tbu {len_tickers_tbu}, continue? (y/n)')
                 if order.lower() == 'y':
+                    from Eikon import Eikon_update_price_enhanced
                     Eikon_update_price_enhanced(tickers_tbu, threadcount=16)
                 # Eikon_update_price(tickers_tbu)
 

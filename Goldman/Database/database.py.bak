@@ -8,7 +8,7 @@ import sys
 
 from uti import timeit, DataLoader, Logger
 from Crawler import gs_get_page_data
-from Path import ONEDRIVE_PATH, DATABASE_PATH, BASE_PATH
+from Path import ONEDRIVE_PATH, DATABASE_PATH
 
 from datetime import datetime
 from bs4 import BeautifulSoup
