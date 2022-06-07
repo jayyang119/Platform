@@ -1,0 +1,13 @@
+
+
+1. Start the browser
+python main.py --task=crawler
+
+a. Search for report with "Equity Research" tag, click 
+b. Company Highlights -> View More
+c. Sort by date
+d. Enter 'y' in terminal 2 times
+
+2. Update database and generate daily prediction
+
+python main.py --task=price_df_predict

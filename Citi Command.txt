@@ -1,0 +1,9 @@
+
+
+1. Update database
+
+python main.py --task=database_update
+
+2. generate daily prediction
+
+python main.py --task=price_df_predict
