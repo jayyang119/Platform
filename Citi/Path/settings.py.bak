@@ -1,0 +1,5 @@
+import os
+
+# BASE_PATH = "C:/Users/JayYang/OneDrive - Alpha Sherpa Capital"
+BASE_PATH = "C:/Users/amazn/OneDrive - Alpha Sherpa Capital/Goldman2"
+DATABASE_PATH = os.path.join(BASE_PATH, 'Database/')

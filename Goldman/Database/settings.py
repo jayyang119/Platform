@@ -1,0 +1,1 @@
+from Crawler import REPORT_TYPE_MAPPING
