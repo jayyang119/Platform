@@ -15,8 +15,9 @@ def tpc_scanner(summary_list: list) -> list:
                    r'\b(?:pt|tp|target price|price target|sotp|target) [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}\d*\.?\d+ to? [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
                    r'\b(?:pt|tp|target price|price target|sotp|target) [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
                    r'\b(?:pt|tp|target price|price target|sotp|target) of [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
+                   r'\b(?:pt|tp|target price|price target|sotp|target) remains (?:at ){0,1}[a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
                    r'\b(?:pt|tp|target price|price target|sotp|target) to [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
-                   r'\b(?:pt|tp|target price|price target|sotp|target) at [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
+                   r'\b(?:pt|tp|target price|price target|sotp|taret) at [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
                    r'\b(?:pt|tp|target price|price target|sotp|target) is now set at [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
                    r'\b(?:pt|tp|target price|price target|sotp|target) now at [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
                    r'\b(?:pt|tp|target price|price target|sotp|target) rises to [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
@@ -31,7 +32,7 @@ def tpc_scanner(summary_list: list) -> list:
                    , flags=re.I)
 
     count = 0
-    years_tbd = map(str, range(2019, 2031))
+    years_tbd = list(map(str, range(2019, 2031)))
 
     for summary in summary_list:
         summary = str(summary).replace(',', '')

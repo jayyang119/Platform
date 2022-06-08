@@ -30,7 +30,7 @@ def tpc_scanner(summary_list: list) -> list:
                    , flags=re.I)
 
     count = 0
-    years_tbd = map(str, range(2019, 2031))
+    years_tbd = list(map(str, range(2019, 2031)))
 
     for summary in summary_list:
         summary = str(summary).replace(',', '')
