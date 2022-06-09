@@ -48,20 +48,12 @@ class GSDatabase:
                 login_form_password.send_keys(password)
 
         UM.navigate(driver, xpath=f'//div/input[@type="submit"]', move=True, click=True)
-        state = ''
-        while state == '':
-            state = input('Please press enter if login successful.')
+        state = 'n'
+        while state != 'y':
+            state = input('Please press enter if login successful. [y/n]')
 
     def crawler(self, driver=None):
-        driver = UM.start_browser()
-        UM.get_url(driver, 'https://nbf-library.bluematrix.com/client/library.jsp')
-        self.nbc_login(driver)
-
-        type_lst = ['Research Flash']
         result = defaultdict(list)
-        flag = False
-
-        # Need to get page length:
         last_page_button = driver.find_elements(By.XPATH, '//li[@class="paginate_button page-item "]')
         if len(last_page_button) > 0:
             last_page_button = last_page_button[-1]
@@ -122,72 +114,88 @@ class GSDatabase:
 
         return df
 
+    def update_sentiment_df(self, df):
+        df['rating_prev'] = df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.shift())
+        df = df.sort_values(['publish_date_and_time'], ascending=True).reset_index(drop=True)
+        df['tp_curr'] = df.groupby(['ticker'])['tp_curr'].apply(lambda x: x.fillna(method='ffill'))
+
+        for col in ['tp_curr', 'tp_chg_pct', 'abs(tp_chg)']:
+            df[col] = df[col].astype(float)
+        df['tp_prev'] = df.groupby(['ticker'])['tp_curr'].apply(lambda x: x.shift())
+        df['tp_chg'] = df.groupby(['ticker'])['tp_curr'].apply(lambda x: x - x.shift())
+        df['abs(tp_chg)'] = abs(df['tp_chg'])
+        df['tp_chg_pct'] = df['tp_chg'] / df['tp_curr']
+
+        df['rating_curr'] = df.groupby(['ticker'])['rating_curr'].apply(
+            lambda x: x.fillna(method='ffill'))
+        df['rating_prev'] = df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.shift())
+
+        # Define report types
+        er_mask = er_filter(df['headline'], df['summary'])
+        rc_mask = df['rating_curr'] != df['rating_prev']
+        tp_mask = df['tp_curr'] != df['tp_prev']
+        io_mask = io_filter(df['headline'], df['summary'])
+        ec_mask = ec_filter(df['headline'], df['summary'])
+
+        df['report_type'] = 'ad-hoc'
+        df['report_type'] = np.where(er_mask, 'Earning\'s Review', df['report_type'])
+        df['report_type'] = np.where(ec_mask, 'Estimate Change', df['report_type'])
+        df['report_type'] = np.where(io_mask, 'Initiation', df['report_type'])
+        df['report_type'] = np.where(tp_mask, 'Target Price Change', df['report_type'])
+        df['report_type'] = np.where(rc_mask, 'Rating Change', df['report_type'])
+        return df
+
     @timeit
     def GS_update_sentiment(self, update=True):
         logger.info('Updating database')
         sentiment_df = DL.loadDB('NBC sentiment.csv', parse_dates=['publish_date_and_time'])
 
-        if update:
-            df = self.crawler()
-            df['headline_senti'] = None
-            df['summary_senti'] = None
+        if not update:
+            sentiment_df = self.update_sentiment_df(sentiment_df)
+            DL.toDB(sentiment_df, f'NBC sentiment.csv')
+        else:
+            driver = UM.start_browser()
+            UM.get_url(driver, 'https://nbf-library.bluematrix.com/client/library.jsp')
+            self.nbc_login(driver)
 
-            # Update TPC, RC
-            df[['tp_prev', 'tp_chg', 'tp_chg_pct', 'abs(tp_chg)']] = None
-            df[['rating_prev']] = None
-            df[['report_type']] = ''
+            status = 'y'
+            while status == 'y':
+                print('Please navigate to Search page, and insert correct dates and report types:\n'
+                      'Research Flash.')
+                status1 = 'n'
+                while status1 != 'y':
+                    status1 = input('Continue? [y/n]')
+                searchweb_url = driver.current_url
+                df = self.crawler(driver)
+                df[['headline_senti', 'summary_senti']] = None
+                df[['tp_prev', 'tp_chg', 'tp_chg_pct', 'abs(tp_chg)']] = None
+                df[['rating_prev']] = None
+                df[['report_type']] = ''
 
-            if len(sentiment_df) == 0:
-                new_df = df.copy()
-            else:
-                sentiment_df = pd.concat([sentiment_df, df[sentiment_df.columns]], axis=0).drop_duplicates(
-                    ['publish_date_and_time', 'uid'])
-                new_df = sentiment_df[sentiment_df['headline_senti'].isna()].copy().reset_index(drop=True)
-                sentiment_df = sentiment_df[~sentiment_df['headline_senti'].isna()].reset_index(drop=True)
+                if len(sentiment_df) == 0:
+                    new_df = df.copy()
+                else:
+                    sentiment_df = pd.concat([sentiment_df, df[sentiment_df.columns]], axis=0).drop_duplicates(
+                        ['publish_date_and_time', 'uid'])
+                    new_df = sentiment_df[sentiment_df['headline_senti'].isna()].copy().reset_index(drop=True)
+                    sentiment_df = sentiment_df[~sentiment_df['headline_senti'].isna()].reset_index(drop=True)
 
-            if len(new_df) > 0:
-                new_df['headline_senti'], _ = update_sentiment(new_df['headline'])
-                new_df['summary_senti'], _ = update_sentiment(new_df['summary'])
-            DL.toDB(new_df, 'new_df.csv')
+                if len(new_df) > 0:
+                    new_df['headline_senti'], _ = update_sentiment(new_df['headline'])
+                    new_df['summary_senti'], _ = update_sentiment(new_df['summary'])
+                DL.toDB(new_df, 'new_df.csv')
+                new_df = DL.loadDB('new_df.csv', parse_dates=['publish_date_and_time'])
+                logger.info(new_df)
 
-        new_df = DL.loadDB('new_df.csv', parse_dates=['publish_date_and_time'])
-        logger.info(new_df)
+                sentiment_df = pd.concat([new_df[sentiment_df.columns], sentiment_df], axis=0).sort_values(
+                    'publish_date_and_time', ascending=True). \
+                    drop_duplicates(['publish_date_and_time', 'uid'], keep='first').reset_index(drop=True)
 
-        sentiment_df = pd.concat([new_df[sentiment_df.columns], sentiment_df], axis=0).sort_values(
-            'publish_date_and_time', ascending=True). \
-            drop_duplicates(['publish_date_and_time', 'uid'], keep='first').reset_index(drop=True)
-        sentiment_df['rating_prev'] = sentiment_df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.shift())
+                sentiment_df = self.update_sentiment_df(sentiment_df)
+                DL.toDB(sentiment_df, f'NBC sentiment.csv')
+                UM.get_url(driver, searchweb_url)
+                status = input('Continue scraping (Please refresh the search page)? [y/n]')
 
-        sentiment_df = sentiment_df.sort_values(['publish_date_and_time'], ascending=True).reset_index(drop=True)
-        sentiment_df['tp_curr'] = sentiment_df.groupby(['ticker'])['tp_curr'].apply(lambda x: x.fillna(method='ffill'))
-
-        for col in ['tp_curr', 'tp_chg_pct', 'abs(tp_chg)']:
-            sentiment_df[col] = sentiment_df[col].astype(float)
-        sentiment_df['tp_prev'] = sentiment_df.groupby(['ticker'])['tp_curr'].apply(lambda x: x.shift())
-        sentiment_df['tp_chg'] = sentiment_df.groupby(['ticker'])['tp_curr'].apply(lambda x: x - x.shift())
-        sentiment_df['abs(tp_chg)'] = abs(sentiment_df['tp_chg'])
-        sentiment_df['tp_chg_pct'] = sentiment_df['tp_chg'] / sentiment_df['tp_curr']
-
-        sentiment_df['rating_curr'] = sentiment_df.groupby(['ticker'])['rating_curr'].apply(
-            lambda x: x.fillna(method='ffill'))
-        sentiment_df['rating_prev'] = sentiment_df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.shift())
-
-        # Define report types
-        er_mask = er_filter(sentiment_df['headline'], sentiment_df['summary'])
-        rc_mask = sentiment_df['rating_curr'] != sentiment_df['rating_prev']
-        # Backfill rating_prev with previous rating_curr
-
-        tp_mask = sentiment_df['tp_curr'] != sentiment_df['tp_prev']
-        io_mask = io_filter(sentiment_df['headline'], sentiment_df['summary'])
-        ec_mask = ec_filter(sentiment_df['headline'], sentiment_df['summary'])
-
-        sentiment_df['report_type'] = 'ad-hoc'
-        sentiment_df['report_type'] = np.where(er_mask, 'Earning\'s Review', sentiment_df['report_type'])
-        sentiment_df['report_type'] = np.where(ec_mask, 'Estimate Change', sentiment_df['report_type'])
-        sentiment_df['report_type'] = np.where(io_mask, 'Initiation', sentiment_df['report_type'])
-        sentiment_df['report_type'] = np.where(tp_mask, 'Target Price Change', sentiment_df['report_type'])
-        sentiment_df['report_type'] = np.where(rc_mask, 'Rating Change', sentiment_df['report_type'])
-        DL.toDB(sentiment_df, f'NBC sentiment.csv')
         return sentiment_df
 
 if __name__ == '__main__':
