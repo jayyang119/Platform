@@ -50,7 +50,7 @@ class GSDatabase:
         UM.navigate(driver, xpath=f'//div/input[@type="submit"]', move=True, click=True)
         state = 'n'
         while state != 'y':
-            state = input('Please press enter if login successful. [y/n]')
+            state = input('Please press enter if login successful. [y/n]').lower()
 
     def crawler(self, driver=None):
         result = defaultdict(list)
@@ -164,7 +164,7 @@ class GSDatabase:
                       'Research Flash.')
                 status1 = 'n'
                 while status1 != 'y':
-                    status1 = input('Continue? [y/n]')
+                    status1 = input('Continue? [y/n]').lower()
                 searchweb_url = driver.current_url
                 df = self.crawler(driver)
                 df[['headline_senti', 'summary_senti']] = None
@@ -194,12 +194,11 @@ class GSDatabase:
                 sentiment_df = self.update_sentiment_df(sentiment_df)
                 DL.toDB(sentiment_df, f'NBC sentiment.csv')
                 UM.get_url(driver, searchweb_url)
-                status = input('Continue scraping (Please refresh the search page)? [y/n]')
+                status = input('Continue scraping (Please refresh the search page)? [y/n]').lower()
 
         return sentiment_df
 
 if __name__ == '__main__':
     GSD = GSDatabase()
     GSD.GS_update_sentiment(update=True)
-
 
