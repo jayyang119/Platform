@@ -185,9 +185,10 @@ class GSDatabase:
 
         return sentiment_df
 
-    # deal with edt, est
     def handle_edt(self, sentiment):
-
+        '''
+            Clean time format with EDT, EST.
+        '''
         edt = sentiment[sentiment['Time'].str.contains('EDT')].copy()
         est = sentiment[~sentiment['Time'].str.contains('EDT')].copy()
 

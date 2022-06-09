@@ -24,8 +24,6 @@ def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT'))
         sys.path.append(ONEDRIVE_PATH)
     from finBERT import get_sentiments_finbert  # Temporarily, exploring a new way to import from outer project directory
 
-    if ONEDRIVE_PATH not in sys.path:
-        sys.path.append(ONEDRIVE_PATH)
     torch.cuda.empty_cache()
     sentiment_headlines = get_sentiments_finbert(headline, base_path)
     return sentiment_headlines
