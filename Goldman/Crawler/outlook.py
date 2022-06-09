@@ -5,6 +5,9 @@ from uti import timeit
 
 
 def outlook_initialize(folder_name='GS'):
+    """
+        This function retrieves and returns the latest email stored in Outlook GS folder.
+    """
     outlook = win32com.client.Dispatch('outlook.application').GetNamespace("MAPI")
     accounts = win32com.client.Dispatch("Outlook.Application").Session.Accounts
 
@@ -23,6 +26,9 @@ def outlook_initialize(folder_name='GS'):
 
 @timeit
 def outlook_get_marquee_link(messages):
+    """
+        This function searches for the url links in the latest GS email.
+    """
     for message in messages:
         soup = BeautifulSoup(message.HTMLBody, 'html.parser')
 

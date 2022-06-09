@@ -11,6 +11,9 @@ UM = UrlManager()
 logger = Logger()
 
 def GS_repeat_get_url(browser, messages=[]):
+    """
+        This function repeatedly tries out the url links in messages, until one valid url is found and browse to it.
+    """
     logger.info('Accessing url...')
     urls = outlook_get_marquee_link(messages)
     assert len(urls) > 0, 'URL is empty, please check the Email messages.'
@@ -35,6 +38,9 @@ def GS_repeat_get_url(browser, messages=[]):
             logger.error(e)
 
 def GS_crawler(crawl_older_dates=False):
+    """
+        This function wraps up all the procedures of crawling Goldman research reports.
+    """
     if crawl_older_dates:
         logger.info('Job: GS_crawler | Mode: crawl older dates')
     else:
@@ -86,8 +92,10 @@ def GS_crawler(crawl_older_dates=False):
         userinput = input('Re-crawl the website? [y/n]')
 
 def GS_crawler_report_type(crawl_older_dates=True):
-
-
+    """
+        This function wraps up all the procedures of crawling Goldman research reports, and clicks into each report link
+        to acquire the broker-defined report type.
+    """
     # Step 1: Get valid url
     GS_messages = outlook_initialize()
     browser = UM.start_browser()

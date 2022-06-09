@@ -18,6 +18,9 @@ DATABASE_PATH = DL.database_path
 
 
 def gs_get_page_time(text):
+    """
+        This function cleans the time format of Goldman report publication.
+    """
     text, zone = text[:-2], text[-2:]
     mapping = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
                'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
@@ -33,6 +36,9 @@ def gs_get_page_time(text):
 
 
 def gs_get_page_data(row, output_type='list'):
+    """
+        This function cleans information from the html table of each page of Equity Research reports.
+    """
     writeline = {}
     # Get dates
     _time = gs_get_page_time(row.find_all('div', class_="SearchResults__dateInTitleCol")[0].text)
@@ -93,6 +99,9 @@ def gs_get_page_data(row, output_type='list'):
 
 
 def gs_flip_page(browser):
+    """
+        This function navigates the browser to flip to the next page of Equity Research reports.
+    """
     try:
         # UM.navigate(browser, XPATH=f"//ul/li/a[contains(text(), {str(page)})]", click=True, idle=randint(3, 5))
         UM.navigate(browser, XPATH="//ul/li/a[@class='SearchResults__paginationNext']", click=True, idle=randint(3, 5))
@@ -101,6 +110,10 @@ def gs_flip_page(browser):
 
 
 def gs_get_page_table_and_time(browser, report_type_path):
+    """
+        This function retrieves the latest report published on the current Goldman Equity Research platform,
+        and compare with the latest report existing in the database.
+    """
     try:
         table = browser.find_element(By.XPATH, '//table')
     except Exception as e:
@@ -127,8 +140,11 @@ def gs_get_page_table_and_time(browser, report_type_path):
     return table, latest_report_time, latest_report_time_str
 
 
-# @timeit
 def gs_save_page(browser, crawl_older_dates=False, report_type_path='Goldman Reports'):
+    """
+        This function saves the page html table to local database, stored in
+        Database/Goldman/Goldman Reports by date.
+    """
     if not crawl_older_dates:
         latest_record = max([os.path.basename(x) for x in glob.glob(f'{DATABASE_PATH}/{report_type_path}/*')]).rstrip(
             '.json')
@@ -229,33 +245,3 @@ def gs_save_page(browser, crawl_older_dates=False, report_type_path='Goldman Rep
     GS_raw.drop_duplicates(inplace=True)
     GS_raw = GS_raw.sort_values(['Time'], ascending=False)
     DL.toDB(GS_raw, 'GS_raw.csv')
-
-
-def gs_get_report_type(df):
-    # Columns: Earnings, Initial Coverage, Estimate change, Ratings change, ad-hoc, Guidance
-    # Sequence is in descending order of the significance of the factors.
-    # - Ratings change:
-    # - Earnings change/reveiw
-    # - Guidance: before results release, or compared with released results
-    # - Ad-hoc: company update
-
-    mapping = {'Earnings': ['earning', 'revenue', 'sales', 'profit', 'eps', 'ebit'],
-               'Initiate': ['initiate'],
-               'Rating': [' rating'],
-               'Estimates': ['estimate'],
-               'Guidance': ['guidance'],
-               'Review': ['review', 'revision']}
-    df[list(mapping.keys())] = 0
-
-    for i, row in df.iterrows():
-        headline = row['Headline'].lower()
-
-        for col in mapping.keys():
-            for kw in mapping[col]:
-                if kw in headline:
-                    df.loc[i, col] = 1
-                    break
-
-    if 'Analysts' in df.columns:
-        df['Head analyst'] = df['Analysts'].apply(lambda x: x.split('|')[0].strip())
-    return df
