@@ -9,6 +9,9 @@ DL = DataLoader()
 
 
 class DataCleaner:
+    """
+        This class summarizes the functions used to conduct data cleansing.
+    """
     def __init__(self):
         pass
 
@@ -85,6 +88,9 @@ class DataCleaner:
         return train_data, test_data
 
     def get_model_test_data(self, strategy):
+        """
+            This function returns the data ready for modelling.
+        """
         if DL.checkDB(f'Backtest/{strategy}.csv'):
             test_data = DL.loadDB(f'Backtest/{strategy}.csv', parse_dates=['Time'])
         else:

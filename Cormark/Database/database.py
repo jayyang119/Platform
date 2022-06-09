@@ -21,6 +21,9 @@ UM = UrlManager()
 
 @timeit
 def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT')):
+    """
+        This function clears gpu memory cache and returns the finBERT's predicted sentiments given a list of sentences.
+    """
     if ONEDRIVE_PATH not in sys.path:
         sys.path.append(ONEDRIVE_PATH)
     from finBERT import get_sentiments_finbert  # Temporarily, exploring a new way to import from outer project directory
@@ -31,10 +34,16 @@ def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT'))
 
 
 class GSDatabase:
+    """
+        This class summarizes necessary functions to update the GS_raw.csv and GS_sentiment.csv.
+    """
     def __init__(self):
         pass
 
     def cormark_login(self, driver, need_un=True):
+        """
+            This function auto login Cormark platform with credentials.
+        """
         username = 'tsang@a-s-capital.com'
         password = 'ytf73bei06'
         login_form = driver.find_elements(By.XPATH, f'//input[@class="form-control"]')
@@ -53,6 +62,9 @@ class GSDatabase:
             state = input('Please press enter if login successful. [y/n]')
 
     def clean_cormark_ticker(self, ticker: str):
+        """
+            This function cleans tickers from Cormark platform html.
+        """
         ticker = ticker.replace('-CA', ' CN')
         ticker = ticker.replace('-US', ' US')
 
@@ -65,6 +77,9 @@ class GSDatabase:
         return ticker
 
     def crawler(self, driver):
+        """
+            This function crawls report information from NBC's report page.
+        """
         uid_pattern = re.compile(r'pdf\/(.*)\?')
 
         # Need to get page length:
@@ -116,6 +131,10 @@ class GSDatabase:
         return df
 
     def update_sentiment_df(self, df):
+        """
+            This function updates sentiment, backfills the target prices, ratings of df, and
+            define report type based on regex search.
+        """
         for senti_col in ['headline_senti', 'summary_senti']:
             print(senti_col)
             senti_empty_mask = df[senti_col].isna()
@@ -181,6 +200,9 @@ class GSDatabase:
 
     @timeit
     def GS_update_sentiment(self, update=True):
+        """
+            This function initiates the platform crawler and updates sentiment data.
+        """
         logger.info('Updating database')
         sentiment_df = DL.loadDB('Cormark sentiment.csv', parse_dates=['publish_date_and_time'])
         if len(sentiment_df) == 0:

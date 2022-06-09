@@ -8,6 +8,9 @@ DL = DataLoader()
 
 
 def asia_df(df):
+    """
+        Asia filtering rules for Goldman reports.
+    """
     asia = df[df['exch_region'] == 'Asia'].reset_index(drop=True)  # A copy
     if len(asia) == 0:
         return pd.DataFrame()
@@ -89,6 +92,9 @@ def asia_df(df):
 
 # Europe
 def eu_df(df):
+    """
+        Europe filtering rules for Goldman reports.
+    """
     europe = df[df['exch_region'] == 'Europe'].reset_index(drop=True)
     if len(europe) == 0:
         return pd.DataFrame()
@@ -218,6 +224,9 @@ def eu_df(df):
 
 # US
 def am_df(df):
+    """
+        America filtering rules for Goldman reports.
+    """
     am = df[df['exch_region'] == 'Americas'].reset_index(drop=True)
     if len(am) == 0:
         return pd.DataFrame()
@@ -260,42 +269,6 @@ def am_df(df):
 
     return am_trades
 
-
-def region_case_study(region='Asia', side='positive'):
-    column = 'd0_r'
-    train_data, test_data = DC.get_benchmark_test_data()
-    train_data = pd.concat([train_data, test_data], axis=0).reset_index(drop=True)
-    train_data = train_data[train_data['exch_region'] == region].reset_index(drop=True)
-    test_data = test_data[test_data['exch_region'] == region].reset_index(drop=True)
-
-    train_data['side'] = side
-    # train_data = get_pnl(train_data)
-    pnl_df = get_pnl(train_data)
-
-    expectancy_sort_by = get_expectancy(train_data, column,
-                                        inputs=['No. of trades', column, 'Report Type', 'Headline sentiment', 'Summary sentiment', 'exch_location'],
-                                        group_by=['Report Type', 'Headline sentiment', 'Summary sentiment', 'exch_location'])
-
-    for hs in ['positive', 'negative', 'neutral']:
-        for ss in ['positive', 'negative', 'neutral']:
-            for market in test_data['exch_location'].unique():
-                for report_type in test_data['Report Type'].unique():
-                    ind = (report_type, hs, ss, market)
-                    if ind not in expectancy_sort_by.index:
-                        expectancy_sort_by.loc[ind] = [0] * len(expectancy_sort_by.columns)
-
-    expectancy_mapping = [expectancy_sort_by.loc[(x['Report Type'], x['Headline sentiment'], x['Summary sentiment'], x['exch_location'])]['Expectancy']
-                          for _, x in test_data[['Report Type', 'Headline sentiment', 'Summary sentiment', 'exch_location']].iterrows()]
-    test_data.loc[:, 'Expectancy'] = expectancy_mapping
-
-    DL.toBT(pnl_df, f'{region}_{side}_pnl')
-    plot_matrix(f'{region}_{side}_pnl')
-    # pnl_df = Engine.portfolio_management(pnl_df)
-    # DL.toBT(pnl_df, f'{region}_{side}_pnl(PM)')
-
-    # strategy = f'{region}_pnl(PM)'
-    # vis = visual(strategy)
-    # vis.visual_job()
 
 #
 # def get_expectancy_based_on_sort_by(train_data, test_data, sort_by=[]):

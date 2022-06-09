@@ -8,6 +8,9 @@ from Path import DATABASE_PATH, DAILY_PATH
 
 
 class Logger:
+    """
+        This class wraps up necessary functions for logging.
+    """
     def __init__(self):
         self.daily_path = DAILY_PATH
         self.database_path = DATABASE_PATH

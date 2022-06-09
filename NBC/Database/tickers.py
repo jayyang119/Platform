@@ -1,8 +1,5 @@
-import pandas as pd
 from uti import DataLoader, Logger
-from Broker import ricsregion
-from Eikon import Eikon_update_price_enhanced
-from Crawler import REPORT_TYPE_DICT
+from Database.settings import REPORT_TYPE_DICT
 
 DL = DataLoader()
 logger = Logger()

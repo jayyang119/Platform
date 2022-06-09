@@ -1,8 +1,3 @@
-from Crawler import REPORT_TYPE_DICT
-from uti import timeit, DataLoader, Logger
-from Path import DATABASE_PATH, ONEDRIVE_PATH, BASE_PATH
-from Database.rating_change import tpc_scanner, rc_scanner, rating_scanner
-
 import os
 import pandas as pd
 import numpy as np
@@ -11,6 +6,10 @@ import json
 import torch
 import sys
 
+from Database.settings import REPORT_TYPE_DICT
+from uti import timeit, DataLoader, Logger
+from Path import DATABASE_PATH, ONEDRIVE_PATH, BASE_PATH
+from Database.rating_change import tpc_scanner, rc_scanner, rating_scanner
 from flatten_json import flatten_json
 from datetime import timedelta
 
@@ -22,6 +21,9 @@ logger = Logger()
 
 @timeit
 def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT')):
+    """
+        This function clears gpu memory cache and returns the finBERT's predicted sentiments given a list of sentences.
+    """
     if ONEDRIVE_PATH not in sys.path:
         sys.path.append(ONEDRIVE_PATH)
     from finBERT import get_sentiments_finbert  # Temporarily, exploring a new way to import from outer project directory
@@ -32,6 +34,9 @@ def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT'))
 
 
 class GSDatabase:
+    """
+        This class summarizes necessary functions to update the GS_raw.csv and GS_sentiment.csv.
+    """
     def __init__(self):
         pass
 
@@ -93,11 +98,10 @@ class GSDatabase:
     @timeit
     def GS_update_sentiment(self, update=True):
         """
-        0. Sort by Ticker, Date first.
-        1. TPC scanner
-        2. Backfill new Target Price
-        3. Prev Target Price
-        4. Target Price Change
+            This function update the sentiment data
+            1. Sort by Ticker, Date
+            2. Use regex search to fill in target prices, ratings
+            3. Backfill target prices, ratings
         """
 
         logger.info('Updating database')

@@ -12,12 +12,13 @@ DL = DataLoader()
 
 
 def benchmark_filter(df, bt=False):
+    """
+        This function returns the filtered trades based on rules by calling asia_df, am_df, eu_df.
+    """
     asia_data = asia_df(df)
     am_data = am_df(df)
     euro_data = eu_df(df)
     all_data = pd.concat([asia_data, euro_data, am_data], axis=0).reset_index(drop=True) # , am_data
-    # all_data = pd.concat([asia_data], axis=0).reset_index(drop=True)
-
 
     if bt is True:
         all_data = get_pnl(all_data)
@@ -25,11 +26,17 @@ def benchmark_filter(df, bt=False):
 
 
 class DataCleaner:
+    """
+        This class summarizes the functions used to conduct data cleansing.
+    """
     def __init__(self):
         pass
 
     @classmethod
     def preprocess_trade_df(cls, _df):
+        """
+            Price df preprocess.
+        """
         assert type(_df) == pd.DataFrame, 'df must be pd.DataFrame, please check.'
         df = _df.copy(deep=True)
         df = df[df['Summary'] != ''].copy(deep=True)
@@ -49,6 +56,9 @@ class DataCleaner:
 
     @staticmethod
     def split_data(X, y, time=None):
+        """
+            This function splits price_df into training set and testing set choreographically.
+        """
         if time is None:
             # Stratify to ensure the proportion of data
             skf = StratifiedKFold(n_splits=3, shuffle=True, random_state=9988)
@@ -60,6 +70,10 @@ class DataCleaner:
         return X_train, X_test
 
     def train_test_data(self):
+        """
+            This function retrieves price_df to training data, testing data with calculated pnl based on benchmark rules,
+            blind_long, blind_short with pnl.
+        """
         trade_df = DL.loadDB('price_df.csv', parse_dates=['Date', 'Time'])
         trade_df = self.preprocess_trade_df(trade_df)
         trade_df = trade_df[trade_df['release_period'] != 'Within'].reset_index(drop=True)
@@ -81,6 +95,9 @@ class DataCleaner:
         DL.toDB(trade_df, 'Backtest/Benchmark data/benchmark.csv')
 
     def get_benchmark_test_data(self, update=False):
+        """
+            This function returns existing training data and testing data, otherwise regenerate.
+        """
         if not DL.checkDB('Backtest/Benchmark data/X_train.csv') or update:
             self.train_test_data()
 
@@ -107,6 +124,9 @@ class DataCleaner:
         return train_data, test_data
 
     def get_model_test_data(self, strategy):
+        """
+            This function returns the data ready for modelling.
+        """
         if DL.checkDB(f'Backtest/{strategy}.csv'):
             test_data = DL.loadDB(f'Backtest/{strategy}.csv', parse_dates=['Date', 'Time'])
         else:
@@ -119,16 +139,6 @@ class DataCleaner:
 
         logger.info(test_data)
         return test_data
-
-
-def get_y_expectancy(df):
-    R_df = pd.DataFrame(columns=['R0', 'R1', 'R2'])
-    R_df['R0'] = (df['D0 Close'] - df['d0_open']) / df['ATR']
-    R_df['R1'] = (df['D1 Close'] - df['d0_open']) / df['ATR']
-    R_df['R2'] = (df['D2 Close'] - df['d0_open']) / df['ATR']
-    R_df['Output'] = R_df.mean(axis=1)
-    # R_df['Output'] = R_df['R0'].copy()
-    return R_df['Output']
 
 
 if __name__ == '__main__':

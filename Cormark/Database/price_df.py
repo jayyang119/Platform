@@ -8,8 +8,7 @@ from Eikon import Eikon_update_price_enhanced
 from library import Dataset
 from Model import DataCleaner, benchmark_expectancy
 from Broker import ricsregion
-from Backtest import BacktestEngine, get_expectancy
-from Crawler import REPORT_TYPE_GLOBAL_DICT
+from Database.settings import REPORT_TYPE_GLOBAL_DICT
 
 DL = DataLoader()
 DC = DataCleaner()

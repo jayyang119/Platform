@@ -17,13 +17,14 @@ import pandas as pd
 
 from uti import DataLoader, Logger
 from Broker import get_pnl
-from Model.ML import ML
 
 logger = Logger()
 DL = DataLoader()
-ml = ML()
 
 class LR:
+    """
+        This class summarizes functions for linear regression.
+    """
     def __init__(self, X, y):
         self.X = X
         self.y = y

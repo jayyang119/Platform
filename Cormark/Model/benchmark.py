@@ -29,6 +29,9 @@ Engine = BacktestEngine()
 
 
 def benchmark_expectancy(train_data=None, test_data=None):
+    """
+        This function calculates the historical expectancy of train_data, and maps to test_data as scores.
+    """
     ######################## Scoring System ###################################
     if train_data is None and test_data is None:  # Default training data, testing data
         train_data, test_data = DC.get_benchmark_test_data()
@@ -134,6 +137,9 @@ def benchmark_expectancy(train_data=None, test_data=None):
 
 
 def sub_ele_index(ele, row):
+    """
+        This function returns a tuple of multi-column index for mapping expectancy in test data.
+    """
     result = []
     for sub_ele in ele:
         result.append(row[sub_ele])
@@ -141,6 +147,9 @@ def sub_ele_index(ele, row):
 
 
 def get_daily_trade(_train_data, _test_data, score_weights=[], intercept=[0]):
+    """
+        Given train_data, this function calculates the historical expectancy and maps to test_data.
+    """
     exclusion_list = []
     training_data = _train_data[~_train_data['exch_location'].isin(exclusion_list)].reset_index(drop=True).copy()
     testing_data = _test_data[~_test_data['exch_location'].isin(exclusion_list)].reset_index(drop=True).copy()
@@ -191,6 +200,9 @@ def get_daily_trade(_train_data, _test_data, score_weights=[], intercept=[0]):
 
 
 def simulation(range_of_test=range(10), from_local=False, exclude=[]):
+    """
+        Monte carlo simulation of a set a benchmark rules from get_daily_trade.
+    """
     # Preprocess
     # train_data = DL.loadDB('Backtest/Benchmark data/X train.csv', parse_dates=['publish_date_and_time'])
     # test_data = DL.loadDB('Backtest/Benchmark data/test.csv', parse_dates=['publish_date_and_time'])

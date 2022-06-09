@@ -1,16 +1,15 @@
 import numpy as np
-import pandas as pd
-from Broker import get_pnl
 from uti import DataLoader
-from Backtest.visualize import plot_matrix
 from Model import DataCleaner
-from Backtest.settings import get_expectancy
 
 DL = DataLoader()
 DC = DataCleaner()
 
 
 def benchmark_rule(df_):
+    """
+        Benchmark rule 1: long if double positive, short if any negative.
+    """
     if 'side' not in df_.columns:
         df_['side'] = 'neutral'
     df = df_[['headline_senti', 'summary_senti', 'side']].copy()
@@ -25,6 +24,9 @@ def benchmark_rule(df_):
 
 
 def benchmark_rule2(df_):
+    """
+        Benchmark rule 2: long if target price raise, short if target price cut.
+    """
     if 'side' not in df_.columns:
         df_['side'] = 'neutral'
 
@@ -44,6 +46,9 @@ def benchmark_rule2(df_):
 
 
 def benchmark_rule3(df_):
+    """
+        Benchmark rule 3: long if rating upgrade, short if rating downgrade.
+    """
     # if 'side' not in df_.columns:
     #     df_['side'] = 'neutral'
     # for col in ['RC_upgrade', 'RC_downgrade']:
@@ -75,6 +80,9 @@ def benchmark_rule3(df_):
 
 
 def benchmark_rule4(df_):
+    """
+        Benchmark rule 4: don't enter sides if this is a sector report (Citi only)
+    """
     df = df_[['tickers', 'side']].copy()
     multi_ticker_mask = (df_['tickers'].fillna('').str.contains(','))
     df['side'] = np.where(multi_ticker_mask, 'neutral', df['side'])

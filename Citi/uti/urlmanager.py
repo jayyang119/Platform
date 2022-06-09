@@ -22,6 +22,9 @@ logger = Logger()
 
 
 class UrlManager:
+    """
+        This class wraps up necessary functions for web crawling using selenium.
+    """
     @classmethod
     def start_browser(cls):
         chrome_options = Options()

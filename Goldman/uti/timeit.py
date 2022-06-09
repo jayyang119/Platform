@@ -1,6 +1,9 @@
 import time
 
 def timeit(method):
+    """
+        This class is used as a decorator for other functions to capture running time.
+    """
     def timed(*args, **kw):
         ts = time.time()
         result = method(*args, **kw)

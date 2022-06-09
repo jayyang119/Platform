@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import eikon as ek
 
-ek.set_app_key('16650e29f0f5476b807e49d8c7e2e2f662366533')
+ek.set_app_key('cec2abe836754fe692a01de15032769539511a71')
 import time
 from datetime import datetime
 
@@ -21,6 +21,9 @@ testing = False
 
 
 def Eikon_update_price(tickers=[], daily_update=False):
+    """
+        This function updates the market prices given a list of tickers, and export to database.
+    """
     def merge_market_cap(_ticker, _df):
         if 'MarketCap' not in _df.columns:
             mc = get_marketcap_ts(_ticker, sdate=_df.index[0], edate=_df.index[-1])
@@ -105,6 +108,9 @@ exitFlag = 0
 
 
 class myThread(threading.Thread):
+    """
+        This class is the multi-threading object that processes the Eikon_update_price function.
+    """
     def __init__(self, threadID, tickers):
         threading.Thread.__init__(self)
         self.threadID = threadID

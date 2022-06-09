@@ -5,6 +5,9 @@ from uti.logger import Logger
 
 
 class DataLoader(Logger):
+    """
+        This class wraps up necessary functions to read data from database.
+    """
     def __init__(self, mode='stable'):
         super().__init__()
 

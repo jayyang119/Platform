@@ -20,6 +20,9 @@ UM = UrlManager()
 
 @timeit
 def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT')):
+    """
+        This function clears gpu memory cache and returns the finBERT's predicted sentiments given a list of sentences.
+    """
     if ONEDRIVE_PATH not in sys.path:
         sys.path.append(ONEDRIVE_PATH)
     from finBERT import get_sentiments_finbert  # Temporarily, exploring a new way to import from outer project directory
@@ -30,10 +33,16 @@ def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT'))
 
 
 class GSDatabase:
+    """
+        This class summarizes necessary functions to update the GS_raw.csv and GS_sentiment.csv.
+    """
     def __init__(self):
         pass
 
     def nbc_login(self, driver, need_un=True):
+        """
+            This function auto login NBC platform with credentials.
+        """
         username = 'donnert@a-s-capital.com'
         password = 'Pass4321?'
         login_form = driver.find_elements(By.XPATH, f'//input[@class="form-control"]')
@@ -53,6 +62,9 @@ class GSDatabase:
             state = input('Please press enter if login successful. [y/n]').lower()
 
     def crawler(self, driver=None):
+        """
+            This function crawls report information from NBC's report page.
+        """
         result = defaultdict(list)
         last_page_button = driver.find_elements(By.XPATH, '//li[@class="paginate_button page-item "]')
         if len(last_page_button) > 0:
@@ -115,6 +127,9 @@ class GSDatabase:
         return df
 
     def update_sentiment_df(self, df):
+        """
+            This function backfills the target prices, ratings of df, and define report type based on regex search.
+        """
         df['rating_prev'] = df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.shift())
         df = df.sort_values(['publish_date_and_time'], ascending=True).reset_index(drop=True)
         df['tp_curr'] = df.groupby(['ticker'])['tp_curr'].apply(lambda x: x.fillna(method='ffill'))
@@ -147,6 +162,9 @@ class GSDatabase:
 
     @timeit
     def GS_update_sentiment(self, update=True):
+        """
+            This function initiates the platform crawler and updates sentiment data.
+        """
         logger.info('Updating database')
         sentiment_df = DL.loadDB('NBC sentiment.csv', parse_dates=['publish_date_and_time'])
 

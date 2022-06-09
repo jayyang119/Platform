@@ -6,9 +6,9 @@ Created on Wed Jan 26 15:46:38 2022
 """
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 from random import sample
-
 from Broker import get_pnl
 from uti import DataLoader, Logger
 from Backtest import visual
@@ -16,19 +16,23 @@ from Model.settings import DataCleaner
 from Backtest.settings import get_expectancy
 from Backtest import backtest_engine, plot_matrix
 from Model.settings import benchmark_filter
-from Model.rules import region_case_study
+from Model.LR import LR
 from library import Dataset
 from itertools import product
-
 
 logger = Logger()
 DL = DataLoader()
 DATABASE_PATH = DL.database_path
 DC = DataCleaner()
 Engine = backtest_engine()
+lr = LR()
 
 
 def benchmark_expectancy(sort_by='exch_location', train_data=None, test_data=None):
+    """
+        This function calculates the historical expectancy of train_data, and maps to test_data as scores,
+        given sort_by as the factor.
+    """
     column = 'd0_r'
     if train_data is None and test_data is None:
         train_data, test_data = DC.get_benchmark_test_data()
@@ -90,28 +94,6 @@ def benchmark_expectancy(sort_by='exch_location', train_data=None, test_data=Non
     return test_data
 
 
-def benchmark_strategy(sort_by='exch_region'):
-    train_data, test_data = DC.get_benchmark_test_data()
-    # train_data['side'].replace({'positive': 'long', 'negative': 'short'}, inplace=True)
-    # test_data['side'].replace({'positive': 'long', 'negative': 'short'}, inplace=True)
-    # Scoring system based on R0 market, side, report type
-    expectancy_sort_by = get_expectancy(train_data, column,
-                                        inputs=['No. of trades', column, sort_by, 'side', 'Report Type'],
-                                        group_by=[sort_by, 'side', 'Report Type'])
-
-    for by_i in test_data[sort_by].unique():
-        for side in ['long', 'short']:
-            for report_type in test_data['Report Type'].unique():
-                if (by_i, side, report_type) not in expectancy_sort_by.index:
-                    # ind = (market, side, report_type)
-                    expectancy_sort_by.loc[(by_i, side, report_type)] = [0] * len(expectancy_sort_by.columns)
-
-    expectancy_mapping = [expectancy_sort_by.loc[(x[sort_by], x['side'], x['Report Type'])]['Expectancy']
-                          for _, x in test_data[[sort_by, 'side', 'Report Type']].iterrows()]
-    test_data.loc[:, 'Expectancy'] = expectancy_mapping
-    return test_data
-
-
 region_mapping = {'Europe': 'Europe', 'Korea & Japan': 'Asia',
                   'Southeast Asia': 'Southeast Asia', 'Hong Kong': 'Asia',
                   'Taiwan': 'Asia',
@@ -122,14 +104,21 @@ MARKET_GROUPING_DICT = {'Japan': 'Korea & Japan', 'South Korea': 'Korea & Japan'
                         'Thailand': 'Southeast Asia', 'Taiwan': 'Taiwan', 'Europe': 'Europe', 'Hong Kong': 'Hong Kong',
                         'United States': 'Americas', 'Canada': 'Americas', 'South Africa': 'South Africa'}
 
+
 def sub_ele_index(ele, row):
+    """
+        This function returns a tuple of multi-column index for mapping expectancy in test data.
+    """
     result = []
     for sub_ele in ele:
         result.append(row[sub_ele])
     return tuple(result)
 
 
-def get_daily_trade(train_data, test_data, holding_days=0, score_weights=[], intercept=0):
+def get_daily_trade(train_data, test_data, score_weights=[], intercept=0):
+    """
+        Given train_data, this function calculates the historical expectancy and maps to test_data.
+    """
     train_data['exch_region'] = train_data['exch_region'].replace(region_mapping)
     train_data = train_data[train_data['exch_region'].isin(region_mapping.values())]
     train_data = train_data[
@@ -191,20 +180,10 @@ def get_daily_trade(train_data, test_data, holding_days=0, score_weights=[], int
     return test_data, elements_name
 
 
-def benchmark_rule(df_):
-    df = df_[['Headline sentiment', 'Summary sentiment']].copy()
-
-    #     long_mask = ((df['Headline sentiment'] == 'positive') & (df['Summary sentiment'] != 'negative')) | ((df['Summary sentiment'] == 'positive') & (df['Headline sentiment'] != 'negative'))
-    long_mask = ((df['Headline sentiment'] == 'positive') & (df['Summary sentiment'] == 'positive'))
-    short_mask = (df['Headline sentiment'] == 'negative') | (df['Summary sentiment'] == 'negative')
-
-    df['side'] = np.where(long_mask, 'long', 'neutral')
-    df['side'] = np.where(short_mask, 'short', df['side'])
-
-    return df['side']
-
-
 def simulation(range_of_test=range(10), from_local=False, exclude=[]):
+    """
+        Monte carlo simulation of a set a benchmark rules from get_daily_trade.
+    """
     train_data, test_data = DC.get_benchmark_test_data()
     train_data['exch_location2'] = train_data['exch_location'].copy()
     test_data['exch_location2'] = test_data['exch_location'].copy()
@@ -228,8 +207,8 @@ def simulation(range_of_test=range(10), from_local=False, exclude=[]):
             training_data = dfall_5DR.loc[~dfall_5DR['Date'].isin(testing_date)].copy(deep=True)
             testing_data = dfall_5DR.loc[dfall_5DR['Date'].isin(testing_date)].copy(deep=True)
 
-            output, elements_name = get_daily_trade(training_data, testing_data)
-            model = LR(daily_trade[elements_name], daily_trade[['d0_r']])
+            daily_trade, elements_name = get_daily_trade(training_data, testing_data)
+            model = lr(daily_trade[elements_name], daily_trade[['d0_r']])
             model.train()
             model.evaluate()
             # intercept = -0.03506858

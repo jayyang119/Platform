@@ -7,7 +7,7 @@ from uti import DataLoader, Logger
 from library import Dataset
 from Model import DataCleaner, benchmark_expectancy
 from Broker import ricsregion
-from Crawler import REPORT_TYPE_GLOBAL_DICT
+from Database.settings import REPORT_TYPE_GLOBAL_DICT
 
 DL = DataLoader()
 DC = DataCleaner()
@@ -17,10 +17,16 @@ NOW_STR = logger.NOW_STR
 
 
 class GSPriceDf:
+    """
+        This class wraps up necessary functions to add market data to sentiment data and updates price_df.
+    """
     def __init__(self):
         pass
 
     def add_new_columns(self, _df):
+        """
+            This function adds new price columns to df.
+        """
         df = _df.copy(deep=True)
         df['Sector'] = df[['ticker']].replace({'ticker': self._valid_tickers_dict['Industry']})
         df = ricsregion(df)
@@ -51,6 +57,9 @@ class GSPriceDf:
 
     @staticmethod
     def get_new_columns_index_dict(df):
+        """
+            This function returns the column index of the new price columns.
+        """
         column_index_dict = {}
         price_df_columns = list(df.columns)
 
@@ -76,16 +85,26 @@ class GSPriceDf:
         return column_index_dict
 
     def get_valid_tickers_dict(self):
+        """
+            This function gets the ticker universe, and adds the attribute _valid_tickers_dict as a mapping
+            dictionary to match tickers in the database.
+        """
         self._valid_tickers = DL.loadTickers()
         self._valid_tickers_dict = self._valid_tickers.set_index('Ticker(old)').to_dict()
 
     def get_sentiment_df(self, file='Citi sentiment'):
+        """
+            This function returns Citi sentiment.csv.
+        """
         logger.info(f'Getting {file}')
         df = DL.loadDB(f'{file}.csv', parse_dates=(['Date', 'Time']))  # , parse_dates=(['Time'])
         # df = df[df['ticker'].isin(self._valid_tickers['Ticker(old)'])].reset_index(drop=True)
         return df
 
     def update_price(self, _df):
+        """
+            This function adds 4-day market data to df.
+        """
         df = _df.copy(deep=True)  # A copy
         df = self.add_new_columns(df)
         column_index_dict = self.get_new_columns_index_dict(df)
@@ -149,6 +168,10 @@ class GSPriceDf:
         return df
 
     def GS_update_price_df(self, update=False):
+        """
+            This function adds market data to sentiment data and updates price_df.csv.
+            - update: if true, the function would call Eikon API to retrieve the latest market prices and update price_df.
+        """
         self.get_valid_tickers_dict()
         self._sentiment_df = self.get_sentiment_df()
         # self._sentiment_df = self.get_sentiment_df('Citi sentiment with us')
@@ -194,6 +217,9 @@ class GSPriceDf:
         DC.get_benchmark_test_data(update=True)
 
     def update_market_cap(self, df):
+        """
+            This function updates the market_cap data in df.
+        """
         if 'market_cap_usd' not in df.columns:
             df['market_cap_usd'] = 0.0
         id_mc = list(df.columns).index('market_cap_usd')
@@ -211,6 +237,9 @@ class GSPriceDf:
         return df
 
     def GS_predict_price_df(self, days=3):
+        """
+            This function predicts the model-generated scores for daily trading, ready to be paste to daily reports sheet.
+        """
         self.get_valid_tickers_dict()
         self._sentiment_df = self.get_sentiment_df()
 

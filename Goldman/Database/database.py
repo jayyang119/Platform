@@ -20,6 +20,9 @@ logger = Logger()
 
 @timeit
 def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT')):
+    """
+        This function clears gpu memory cache and returns the finBERT's predicted sentiments given a list of sentences.
+    """
     if ONEDRIVE_PATH not in sys.path:
         sys.path.append(ONEDRIVE_PATH)
     from finBERT import get_sentiments_finbert  # Temporarily, exploring a new way to import from outer project directory
@@ -30,10 +33,16 @@ def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT'))
 
 
 class GSDatabase:
+    """
+        This class summarizes necessary functions to update the GS_raw.csv and GS_sentiment.csv.
+    """
     def __init__(self):
         pass
 
     def _get_writefile(self, field='raw'):
+        """
+            This function returns the data from either GS_raw.csv or GS_sentiment.csv.
+        """
         if field == 'raw':
             if DL.checkDB('GS_raw.csv'):
                 writefile = DL.loadDB('GS_raw.csv', parse_dates=['Date', 'Time'])
@@ -45,8 +54,6 @@ class GSDatabase:
             if DL.checkDB('GS_sentiment.csv'):
                 writefile = DL.loadDB('GS_sentiment.csv', parse_dates=['Date', 'Time'])
                 writefile['Summary'] = writefile['Summary'].fillna('')
-                # if 'Earnings' not in writefile.columns:
-                #     writefile = gs_get_report_type(writefile)
                 return writefile, None
             else:
                 logger.info('Regenerate headline sentiments')
@@ -59,7 +66,8 @@ class GSDatabase:
 
     def _update_date_range(self, writefile):
         """
-        Return the index of the dates needed to be updated
+            This function returns a list of the dates needed to be updated, by comparing to the downloaded reports
+            in GS_raw.csv and the current sentiment data GS_sentiment.csv.
         """
         # date_min = min(writefile['Date'])
         files = glob.glob(f'{DATABASE_PATH}/Goldman Reports/*')
@@ -71,7 +79,6 @@ class GSDatabase:
         if len(writefile) == 0:
             return pd.date_range(earliest_record, latest_record)
 
-        # date_range = pd.date_range(date_min, latest_record)
         date_new = list(set(files_datetime) - set(writefile['Date']))
         if latest_record not in date_new:
             date_new.extend([latest_record])
@@ -85,6 +92,9 @@ class GSDatabase:
         return date_range
 
     def _update_gs_raw_new_df(self, date_range):
+        """
+            This function retrieves the latest downloaded reports stored in Database/Goldman/Goldman Reports.
+        """
         new_df = np.array([])
 
         for dt in date_range:
@@ -108,6 +118,9 @@ class GSDatabase:
         return new_df
 
     def _update_gs_raw(self):
+        """
+            This function updates GS_raw.csv by adding the new reports from calling self._update_gs_raw_new_df.
+        """
         writefile = self._get_writefile('raw')
         date_range = self._update_date_range(writefile)
 
@@ -126,6 +139,9 @@ class GSDatabase:
 
     # Part2: Update GS_sentiment.csv
     def _update_gs_sentiment(self, readfile, **kwarg):
+        """
+            This function updates the sentiments of the new reports in GS_raw and writes into GS_sentiment.csv.
+        """
         writefile, new_df = self._get_writefile('sentiment')
         date_range = self._update_date_range(writefile)
         if new_df is None:
@@ -155,6 +171,9 @@ class GSDatabase:
 
     @timeit
     def GS_update_sentiment(self, file='sentiment'):
+        """
+            This function summarizes the update job of sentiment data.
+        """
         logger.info('Updating database')
 
         raw_df = DL.loadDB('GS_raw.csv', parse_dates=['Date', 'Time'])

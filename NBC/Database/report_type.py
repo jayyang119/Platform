@@ -1,4 +1,9 @@
 def rc_filter(headline_list: list, summary_list: list) -> list:
+    """
+    :param headline_list: a list contains headlines
+    :param summary_list: a list contains summaries
+    :return: mask that is identified as rating change reports
+    """
     keywords = ['to outperform', 'to underperform', 'to market perform', 'to strong buy']
 
     summary_contains_rc = summary_list.apply(lambda x: x.lower()).str.contains('|'.join(keywords))
@@ -12,6 +17,11 @@ def rc_filter(headline_list: list, summary_list: list) -> list:
 
 
 def er_filter(headline_list, summary_list) -> list:
+    """
+    :param headline_list: a list contains headlines
+    :param summary_list: a list contains summaries
+    :return: mask that is identified as earnings review reports
+    """
     keyword_list = ['q1', 'q2', 'q3', 'q4', 'h1', 'h2', 'fy', 'profit alert', 'profit warning', '1q', '2q', '3q', '4q']
     keywords = "|".join(keyword_list)
     preliminary = "|".join(['preliminary'])
@@ -21,6 +31,11 @@ def er_filter(headline_list, summary_list) -> list:
 
 
 def io_filter(headline_list, summary_list) -> list:
+    """
+    :param headline_list: a list contains headlines
+    :param summary_list: a list contains summaries
+    :return: mask that is identified as initiation reports
+    """
     keywords = ['initiate', 'initiation', 'initiating']
     summary_contains_io = summary_list.apply(lambda x: x.lower()).str.contains('|'.join(keywords))
     headline_contains_io = headline_list.apply(lambda x: x.lower()).str.contains('|'.join(keywords))
@@ -31,6 +46,11 @@ def io_filter(headline_list, summary_list) -> list:
 
 
 def ec_filter(headline_list, summary_list) -> list:
+    """
+    :param headline_list: a list contains headlines
+    :param summary_list: a list contains summaries
+    :return: mask that is identified as estimate change reports
+    """
     headline_keywords = ['estimate', 'change', 'tweaking', 'trimming', 'refreshing', 'adjusting', 'updating',
                          'raising estimate', 'cutting estimate', 'reducing estimate']
     summary_keywords = ['tweaking', 'trimming', 'refreshing', 'adjusting', 'updating', 'raising estimate',

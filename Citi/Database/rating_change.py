@@ -8,7 +8,7 @@ logger = Logger()
 
 def tpc_scanner(summary_list: list) -> list:
     """
-        Scan target price from the summaries of the reports that are classified as Target Price Change.
+        This function scans target price from the summaries of the reports.
     """
     tpc_list = []
     r = re.compile(r'\b(?:pt|tp|target price|price target|sotp|target) [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}\d*\.?\d+ to? [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
@@ -56,6 +56,9 @@ def tpc_scanner(summary_list: list) -> list:
 
 
 def rating_scanner(summary_list: list, ticker_list: list) -> list:
+    """
+        This function scans current ratings from the summaries of the reports.
+    """
     summary_list = list(summary_list)
     ticker_list = list(ticker_list)
     rating_list = []
@@ -98,8 +101,7 @@ def rating_scanner(summary_list: list, ticker_list: list) -> list:
 
 def rc_scanner(summary_list: list) -> list:
     """
-        Scan rating change from the summaries of the reports that are classified as Rating Change.
-
+        This function scans rating changes from the summaries of the reports.
     """
     rc = []
     rc_list = []

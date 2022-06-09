@@ -10,7 +10,7 @@ from datetime import datetime
 
 from uti import Logger, DataLoader
 from Broker import get_tr, get_atr
-from Path import DATABASE_PATH, DAILY_PATH, ONEDRIVE_PATH
+from Path import DATABASE_PATH, DAILY_PATH
 
 DL = DataLoader()
 logger = Logger()
@@ -20,23 +20,10 @@ NOW_STR = logger.NOW_STR
 testing = False
 
 
-def Eikon_update_index(tickers=[], daily_update=True):
-    index_df = pd.read_csv(f'{DAILY_PATH}/index universe.csv')
-    print(index_df)
-
-    for i, row in index_df.iterrows():
-        ticker = row['Ticker']
-        print(ticker)
-
-        print(f"New ticker: {ticker}, downloading from Eikon")
-
-        df = ek.get_timeseries(ticker, fields='*', start_date='2015-01-01')
-        print(df)
-        # Index:
-        DL.toDaily(df.reset_index(), f"{ticker}.csv")
-
-
 def Eikon_update_price(tickers=[], daily_update=False):
+    """
+        This function updates the market prices given a list of tickers, and export to database.
+    """
     def merge_market_cap(_ticker, _df):
         if 'MarketCap' not in _df.columns:
             mc = get_marketcap_ts(_ticker, sdate=_df.index[0], edate=_df.index[-1])
@@ -78,13 +65,11 @@ def Eikon_update_price(tickers=[], daily_update=False):
             else:
                 print(f"New ticker: {ticker}, downloading from Eikon")
                 df = ek.get_timeseries(ticker, fields='*', start_date='2015-01-01')
-                # Index:
-                if not ticker.startswith('.'):
-                    df = merge_market_cap(ticker, df)
+                df = merge_market_cap(ticker, df)
                 df = get_tr(df)
                 df = get_atr(df)
 
-            if 'MarketCap' not in df.columns and not ticker.startswith('.'):
+            if 'MarketCap' not in df.columns:
                 df = merge_market_cap(ticker, df)
 
             if daily_update:
@@ -123,6 +108,9 @@ exitFlag = 0
 
 
 class myThread(threading.Thread):
+    """
+        This class is the multi-threading object that processes the Eikon_update_price function.
+    """
     def __init__(self, threadID, tickers):
         threading.Thread.__init__(self)
         self.threadID = threadID
@@ -150,5 +138,3 @@ def chunks(lst, n):
         yield lst[i:i + n]
 
 
-if __name__ == '__main__':
-    Eikon_update_index()

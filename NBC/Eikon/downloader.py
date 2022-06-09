@@ -9,7 +9,9 @@ logger = Logger()
 
 @timeit
 def Eikon_update_price_enhanced(tickers, threadcount=8):
-    # threadcount = 4 # threading.activeCount()
+    """
+        This function initiates multi-threading process given a list of tickers into threadcount number of threads.
+    """
     n = len(tickers) // threadcount
     threads = []
     print(n)
@@ -18,7 +20,6 @@ def Eikon_update_price_enhanced(tickers, threadcount=8):
     else:
         tickers_chunk = [tickers]
         threadcount = 1
-
 
     for i in range(threadcount):
 
