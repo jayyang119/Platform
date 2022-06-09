@@ -23,7 +23,7 @@ def ricsregion(df):
 
 def get_tr(data, rewrite=False):
     """
-     This function is to calculate EMA 10-day ATR
+     This function calculates true ranges
 
      data [DataFrame] - DataFrame that contains price data for specific ticker for at least 10 days
     """
@@ -40,6 +40,11 @@ def get_tr(data, rewrite=False):
 
 
 def get_atr(data):
+    """
+         This function calculates EMA 10-day ATR, based on true ranges.
+
+         data [DataFrame] - DataFrame that contains price data for specific ticker for at least 10 days
+        """
     if 'trmax' not in data.columns:
         print('Calculating true range...')
         get_tr(data)
@@ -94,8 +99,6 @@ def get_pnl(df):
 
     for i, row in df.iterrows():
         ticker = row['ticker']
-        # if ticker in ['600745.SS', 'FSR', '688083.SS', 'ING.AX', '600867.SS', '002511.SZ', '688008.SS', 'CGC.AX', '603160.SS']:
-        #     print(ticker)
         atr = df.iat[i, id_atr]
 
         try:

@@ -8,10 +8,9 @@ if os.path.abspath(f'{dir_name}/..') not in sys.path:
     print(dir_name)
 
 from database import GSDatabase
-from uti import timeit, DataLoader, Logger
+from uti import DataLoader, Logger
 from datetime import datetime
-from settings import REPORT_TYPE_MAPPING
-from Crawler import gs_get_page_data, gs_get_report_type
+from Database.settings import REPORT_TYPE_MAPPING
 
 from Path import DATABASE_PATH
 

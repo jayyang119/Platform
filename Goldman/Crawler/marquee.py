@@ -8,8 +8,8 @@ from datetime import datetime
 from random import randint
 from bs4 import BeautifulSoup
 
-from uti import timeit, Logger, UrlManager, DataLoader, By
-from Crawler.settings import REPORT_TYPE_DICT
+from uti import Logger, UrlManager, DataLoader, By
+from Database.settings import REPORT_TYPE_DICT
 
 DL = DataLoader()
 UM = UrlManager()

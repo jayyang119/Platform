@@ -12,7 +12,10 @@ DL = DataLoader()
 class BacktestEngine:
     """
     Backtest result with risk management
-    - limit up to #daily_position of trades per day per market.
+    - _daily_position: maximum trades per day per market.
+    - _skew: maximum skewness within each market.
+    - _region_position: maximum trades per day per region.
+    - _min_region_position: minimum trades per day per region.
     """
 
     def __init__(self, daily_position=18, skew=0, region_position=6, min_region_position=0):

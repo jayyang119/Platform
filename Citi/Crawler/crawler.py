@@ -4,11 +4,12 @@ from random import randint
 
 from Crawler.outlook import outlook_initialize, outlook_get_marquee_link
 from Crawler.marquee import gs_save_page
-from Crawler.settings import REPORT_TYPE_MAPPING
+from Database.settings import REPORT_TYPE_MAPPING
 from uti import UrlManager, Logger, By
 
 UM = UrlManager()
 logger = Logger()
+
 
 def GS_repeat_get_url(browser, messages=[]):
     logger.info('Accessing url...')

@@ -19,6 +19,7 @@ EXCH = {'AM': 'JR', 'E': 'NA', 'AS': 'NA', 'AX': 'AU', 'BH': 'BI', 'BC': 'SM', '
         'TA': 'IT', 'BK': 'TB', 'T': 'JP', 'K': 'CN', 'TO': 'CN', 'VA': 'SM', 'VI': 'AV',
         'WA': 'PW', 'AD': 'AB', 'CA': 'EY', 'I': 'ID', 'IC': 'IR', 'AT': 'GA',
         'DE': 'GY'}
+
 REGION_MAPPING_DICT = {'Korea & Japan': 'Asia',
                        'Hong Kong': 'Asia', 'Taiwan & Singapore': 'Asia',
                        'Southeast Asia': 'Asia',
@@ -26,6 +27,7 @@ REGION_MAPPING_DICT = {'Korea & Japan': 'Asia',
                        'South Africa': 'South Africa',
                        'Americas': 'Americas',
                        'China': 'Asia', 'Australia': 'Asia', 'Turkey': 'Asia'}
+
 MARKET_MAPPING_DICT = {'Japan': 'Korea & Japan', 'South Korea': 'Korea & Japan',
                         'Hong Kong': 'Hong Kong', 'China': 'China', 'Turkey': 'Turkey',
                         'Taiwan': 'Taiwan & Singapore', 'Singapore': 'Taiwan & Singapore',
