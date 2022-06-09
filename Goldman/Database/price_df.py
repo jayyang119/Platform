@@ -154,10 +154,6 @@ class GSPriceDf:
 
             if update is True:
                 tickers_tbu = np.unique(self._sentiment_df['Ticker'].replace(self._valid_tickers_dict['Ticker']))
-                # tickers_in_db = os.listdir(f'{DATABASE_PATH}/Daily')
-                # tickers_in_db = [x.rstrip('.csv') for x in tickers_in_db]
-                # tickers_tbu = list(set(tickers_tbu) - set(tickers_in_db))
-                # print(tickers_tbu)
                 len_tickers_tbu = str(len(tickers_tbu))
                 order = input(f'Total length of tickers tbu {len_tickers_tbu}, continue? (y/n)')
                 if order.lower() == 'y':
@@ -188,7 +184,6 @@ class GSPriceDf:
                 if order.lower() == 'y':
                     from Eikon import Eikon_update_price_enhanced
                     Eikon_update_price_enhanced(tickers_tbu, threadcount=16)
-                # Eikon_update_price(tickers_tbu)
 
             price_df_tbu = self.update_price(price_df_tbu)
             logger.info(price_df)
@@ -292,11 +287,4 @@ class GSPriceDf:
 
 if __name__ == '__main__':
     GSP = GSPriceDf()
-    # df = GSP.GS_update_price_df(update=False)
-    # DL.toDB(df, 'price_df.csv')
     GSP.GS_update_price_df(update=True)
-    # if datetime.today().weekday() == 0:
-    #     backfill_days = 3
-    # else:
-    #     backfill_days = 1
-    # price_df = GSP.GS_predict_price_df(days=backfill_days)

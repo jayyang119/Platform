@@ -8,11 +8,10 @@ import sys
 
 from uti import timeit, DataLoader, Logger
 from Crawler import gs_get_page_data
-from Path import ONEDRIVE_PATH, DATABASE_PATH, BASE_PATH
+from Path import ONEDRIVE_PATH, DATABASE_PATH
 
 from datetime import datetime
 from bs4 import BeautifulSoup
-from progress.bar import ChargingBar
 
 print('Current working directory', os.getcwd())
 DL = DataLoader()
@@ -35,40 +34,6 @@ def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT'))
 class GSDatabase:
     def __init__(self):
         pass
-
-    def _gs_rewrite_database(self, path):
-        writefile_path = os.path.join(path, 'output.csv')
-        # GS_raw = DL.loadDB('GS_raw.csv')
-        writefile = open(writefile_path, 'w', encoding='utf-8')
-        writefile.write('Date,Time,Ticker,Source,Asset Class,Headline,Summary,Analysts\n')
-
-        # writefile = DL.loadDB(os.Path.join(Path, 'output.csv'))
-        dates_range = os.listdir(path)
-        logger.info(str(len(dates_range)))
-        print(dates_range)
-        bar_name = f'Rewriting database {path}...'
-        bar = ChargingBar("{0:<38}".format(bar_name), max=len(dates_range))
-        try:
-            for date in dates_range:  # latest_dates: a list of dates in string
-                if '.csv' not in date and date >= '20180801':
-                    files = glob.glob(os.path.join(path, date) + '/*.json')
-                    for file_name in files:
-                        if '.csv' not in file_name:
-                            with open(file_name, encoding='utf-8') as f:
-                                soup = BeautifulSoup(f, 'html.parser')
-                                for row in soup.find_all('tr')[1:]:
-                                    writeline = gs_get_page_data(row)
-                                    # logger.info(writeline)
-                                    # writefile = pd.concat([writefile, pd.DataFrame(writeline)], axis=0)
-                                    writefile.write(','.join(writeline))
-                                    writefile.write('\n')
-                bar.next()
-                time.sleep(0.000001)
-        except Exception as e:
-            logger.error(e)
-        writefile.close()
-        bar.finish()
-        return
 
     def _get_writefile(self, field='raw'):
         if field == 'raw':
@@ -116,16 +81,10 @@ class GSDatabase:
             date_new.extend([second_latest_record])
 
         logger.info('Date range needed to be updated:')
-        # logger.info(date_new)
         date_range = pd.date_range(min(date_new), max(date_new))
         print(date_range)
 
-        # userinput = input('Continue? (y/n)')
-        # if userinput.lower() in ['n']:
-        #     return
-
         return date_range
-
 
     def _update_gs_raw_new_df(self, date_range):
         new_df = np.array([])
@@ -141,8 +100,7 @@ class GSDatabase:
                         new_df = np.append(new_df, writeline)
 
         new_df = new_df.reshape(-1, 8)
-        new_df = pd.DataFrame(new_df, columns=['Date', 'Time', 'Ticker', 'Source', 'Asset Class', 'Headline', 'Summary',
-                                               'Analysts'])
+        new_df = pd.DataFrame(new_df, columns=['Date', 'Time', 'Ticker', 'Source', 'Asset Class', 'Headline', 'Summary', 'Analysts'])
         new_df['Headline'] = new_df['Headline'].fillna('')
         new_df['Summary'] = new_df['Summary'].fillna('')
         new_df = new_df.sort_values(['Time'], ascending=False)
@@ -197,18 +155,6 @@ class GSDatabase:
         print("%s: %s" % (datetime.strftime(datetime.now(), "%H:%M:%S"), 'GS_sentiment completed.'))
         return writefile
 
-    def GS_get_raw(self):
-
-        return DL.loadDB('GS_raw.csv', parse_dates=['Date', 'Time'])
-
-    @timeit
-    def GS_update_raw_and_sentiment(self, file='raw'):
-        logger.info('Updating database')
-
-        raw_df = self._update_gs_raw()
-        sentiment_df = self._update_gs_sentiment(raw_df)
-        return sentiment_df
-
     @timeit
     def GS_update_sentiment(self, file='sentiment'):
         logger.info('Updating database')
@@ -216,11 +162,6 @@ class GSDatabase:
         raw_df = DL.loadDB('GS_raw.csv', parse_dates=['Date', 'Time'])
         sentiment_df = self._update_gs_sentiment(raw_df)
         return sentiment_df
-
-    @timeit
-    def GS_rewrite_database(self, path):
-        df = self._gs_rewrite_database(path)
-        return df
 
 if __name__ == '__main__':
     GSD = GSDatabase()
