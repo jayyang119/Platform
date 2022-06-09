@@ -14,7 +14,6 @@ if __name__ == '__main__':
 
     # citi_raw = DL.loadDB('citi_raw.csv')
     # citi_raw_headline_rt_dict = citi_raw.set_index('headline').loc[price_df['Headline']]['broker_lable'].to_dict()
-    #
     # price_df['Report Type'] = price_df['Headline'].replace(citi_raw_headline_rt_dict)
     #
     def define_report_type(s):

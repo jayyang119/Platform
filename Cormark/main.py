@@ -26,7 +26,10 @@ if __name__ == '__main__':
     ###########################################################################
 
     if TASK == 'database_update':
-        GSD.GS_update_sentiment(update=bool(UPDATE))
+        GSD.GS_update_sentiment(update=True)
+
+    elif TASK == 'database':
+        GSD.GS_update_sentiment(update=False)
 
     elif TASK == 'price_df':
         GSPdf = GSPriceDf()

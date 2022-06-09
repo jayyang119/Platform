@@ -2,7 +2,7 @@ from uti import timeit, DataLoader, Logger, UrlManager, By
 from Path import ONEDRIVE_PATH
 from collections import defaultdict
 from Database.report_type import rc_filter, er_filter, io_filter, ec_filter
-from Database.rating_change import tpc_scanner, rc_scanner, rating_scanner
+from Database.rating_change import tpc_scanner, tpc_prev_scanner, rating_scanner
 
 import os
 import time
@@ -38,7 +38,6 @@ class GSDatabase:
         username = 'tsang@a-s-capital.com'
         password = 'ytf73bei06'
         login_form = driver.find_elements(By.XPATH, f'//input[@class="form-control"]')
-        #     pdb.set_trace()
 
         if len(login_form) > 0:
             login_form_username = login_form[0]
@@ -49,13 +48,24 @@ class GSDatabase:
                 login_form_password.send_keys(password)
 
         UM.navigate(driver, xpath=f'//div/input[@type="submit"]', move=True, click=True)
-        state = ''
-        while state == '':
-            state = input('Please press enter if login successful.')
+        state = 'n'
+        while state == 'n':
+            state = input('Please press enter if login successful. [y/n]')
+
+    def clean_cormark_ticker(self, ticker: str):
+        ticker = ticker.replace('-CA', ' CN')
+        ticker = ticker.replace('-US', ' US')
+
+        if '.' in ticker:
+            ticker = ticker.replace('.UN', '-U')
+            ticker = ticker.replace('.UT', '-U')
+            ticker = ticker.replace('.USD', '/U')
+            ticker = ticker.replace('.', '/')
+
+        return ticker
 
     def crawler(self, driver):
         uid_pattern = re.compile(r'pdf\/(.*)\?')
-
 
         # Need to get page length:
         result = defaultdict(list)
@@ -76,7 +86,8 @@ class GSDatabase:
 
                 result['headline'].append(tds[0].find('a').text)
                 result['url'].append(tds[0].find('a')['href'])
-                result['ticker'].append(tds[1].find('a').text)
+                ticker = self.clean_cormark_ticker(tds[1].find('a').text)
+                result['ticker'].append(ticker)
                 result['analyst_pri'].append(tds[2].find('a').text)
                 result['broker_label'].append(tds[3].text.strip('\n '))
                 result['publish_date_and_time'].append(tds[4].text.strip('\n '))
@@ -106,73 +117,57 @@ class GSDatabase:
 
     @timeit
     def GS_update_sentiment(self, update=True):
-
         def update_sentiment_df(sentiment_df):
-            senti_empty_mask = sentiment_df['headline_senti'].isna()
-            senti_empty_mask = sentiment_df['summary_senti'].isna()
-            # sentiment_df.loc[senti_empty_mask, 'headline_senti'], _ = update_sentiment(
-            #     sentiment_df.loc[senti_empty_mask, 'headline'].fillna(''))
-            # sentiment_df.loc[senti_empty_mask, 'summary_senti'], _ = update_sentiment(
-            #     sentiment_df.loc[senti_empty_mask, 'summary'].fillna(''))
+            for senti_col in ['headline_senti', 'summary_senti']:
+                print(senti_col)
+                senti_empty_mask = sentiment_df[senti_col].isna()
+                sentiment_df.loc[senti_empty_mask, senti_col], _ = update_sentiment(
+                    sentiment_df.loc[senti_empty_mask, senti_col.rstrip('_senti')].fillna(''))
 
-            new_df = sentiment_df.loc[sentiment_df['rating_new'].isna() | sentiment_df['tp_new'].isna()]. \
-                reset_index(drop=True).copy()
+            # Update target prices, ratings, rating changes
+            TPC_mask = sentiment_df['tp_curr'].isna()
+            TPC_prev_mask = sentiment_df['tp_prev'].isna()
+            RATING_mask = sentiment_df['rating_curr'].isna()
+            # tpc_prev_scanner
+            if TPC_mask.any():
+                tpc_list = tpc_scanner(sentiment_df[TPC_mask]['summary'])
+                sentiment_df.loc[TPC_mask, 'tp_curr'] = tpc_list
+            if TPC_prev_mask.any():
+                tpc_list = tpc_prev_scanner(sentiment_df[TPC_mask]['summary'])
+                sentiment_df.loc[TPC_prev_mask, 'tp_prev'] = tpc_list
+            if RATING_mask.any():
+                rating_list = rating_scanner(sentiment_df.loc[RATING_mask, 'summary'], sentiment_df.loc[RATING_mask, 'ticker'])
+                sentiment_df.loc[RATING_mask, 'rating_curr'] = rating_list
 
-            if len(new_df) > 0:
-                # Update target prices, ratings, rating changes
-                TPC_mask = new_df['tp_curr'].isna()
-                if TPC_mask.any():
-                    tpc_list = tpc_scanner(new_df[TPC_mask].reset_index()['summary'])
-                    new_df.loc[TPC_mask, 'tp_new'] = tpc_list
-
-                RATING_mask = new_df['rating_new'].isna()
-                if RATING_mask.any():
-                    rating_list = rating_scanner(new_df[RATING_mask]['summary'], new_df[RATING_mask]['ticker'])
-                    new_df.loc[RATING_mask, 'rating_new'] = rating_list
-
-            sentiment_df = pd.concat([new_df[sentiment_df.columns], sentiment_df], axis=0). \
+            sentiment_df = pd.concat([sentiment_df.loc[TPC_mask|RATING_mask|TPC_prev_mask, sentiment_df.columns], sentiment_df], axis=0). \
                 sort_values('publish_date_and_time', ascending=False). \
                 drop_duplicates(['publish_date_and_time', 'uid'], keep='first').reset_index(drop=True)
             sentiment_df = sentiment_df.sort_values(['publish_date_and_time'], ascending=True).reset_index(drop=True)
 
             # Clean target prices mannually with Artificial Intelligence
-            sentiment_df_tbu = sentiment_df[
-                sentiment_df['tp_new'].fillna('').str.contains('\[').fillna(False)].copy().reset_index(drop=True)
-            sentiment_df = sentiment_df[~sentiment_df['tp_new'].fillna('').str.contains('\[').fillna(False)]
-            for i, row in sentiment_df_tbu.iterrows():
-                print()
-                print(row['ticker'])
-                print(row['tickers'])
-                print(row['summary'])
-                print()
-                tp = input(
-                    f'Please insert the real target prices mannually, thanks. If no target price this is a sector report for multiple tickers'
-                    ' just press Enter...')
-                if len(tp) != 0:
-                    print(tp)
-                    sentiment_df_tbu.loc[i, 'tp_new'] = float(tp)
-                else:
-                    sentiment_df_tbu.loc[i, 'tp_new'] = ''
-            sentiment_df = pd.concat([sentiment_df_tbu, sentiment_df], axis=0)
-            sentiment_df['tp_curr'] = sentiment_df.groupby(['ticker'])['tp_new'].apply(
-                lambda x: x.fillna(method='ffill'))
-            # sentiment_df['tp_curr'] = sentiment_df['tp_curr'].replace('', np.nan)
-            for col in ['tp_curr', 'tp_chg_pct', 'abs(tp_chg)']:
-                sentiment_df[col] = sentiment_df[col].astype(float)
-            sentiment_df['tp_prev'] = sentiment_df.groupby(['ticker'])['tp_curr'].apply(lambda x: x.shift())
-            sentiment_df['tp_chg'] = sentiment_df.groupby(['ticker'])['tp_curr'].apply(lambda x: x - x.shift())
-            sentiment_df['abs(tp_chg)'] = abs(sentiment_df['tp_chg'])
-            sentiment_df['tp_chg_pct'] = sentiment_df['tp_chg'] / sentiment_df['tp_curr']
+            for tp_tbu in ['tp_curr', 'tp_prev']:
+                tp_tbu_mask = sentiment_df[tp_tbu].fillna('').str.contains('\[').fillna(False)
+                for i, row in sentiment_df[tp_tbu_mask].iterrows():
+                    print(row['ticker'])
+                    print(row['summary'], '\n')
+                    tp = input(
+                        f'Please insert the real {tp_tbu} mannually, thanks. If no target price this is a sector report for multiple tickers just press Enter...')
+                    if len(tp) != 0:
+                        sentiment_df.loc[i, tp_tbu] = float(tp)
+                    else:
+                        sentiment_df.loc[i, tp_tbu] = ''
 
-            sentiment_df['rating_curr'] = sentiment_df.groupby(['ticker'])['rating_new'].apply(
-                lambda x: x.fillna(method='ffill'))
+            sentiment_df['tp_curr'] = sentiment_df.groupby(['ticker'])['tp_curr'].apply(lambda x: x.fillna(method='ffill'))
+            tpc_mask = (sentiment_df['tp_curr'] > sentiment_df['tp_prev']) | (sentiment_df['tp_curr'] < sentiment_df['tp_prev'])
+            sentiment_df.loc[tpc_mask, 'tp_chg'] = sentiment_df.loc[tpc_mask, 'tp_curr'] - sentiment_df.loc[tpc_mask, 'tp_prev']
+            sentiment_df['tp_chg_pct'] = sentiment_df['tp_chg'] / sentiment_df['tp_curr']
+            sentiment_df['rating_curr'] = sentiment_df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.fillna(method='ffill'))
             sentiment_df['rating_prev'] = sentiment_df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.shift())
 
             # Define report types
             er_mask = er_filter(sentiment_df['headline'], sentiment_df['summary'])
-            rc_mask = sentiment_df['rating_curr'] != sentiment_df['rating_prev']
-            # Backfill rating_prev with previous rating_curr
-            tp_mask = sentiment_df['tp_curr'] != sentiment_df['tp_prev']
+            rc_mask = (sentiment_df['rating_curr'] != sentiment_df['rating_prev']) &\
+                      (~sentiment_df['rating_curr'].isna()) & (~sentiment_df['rating_prev'].isna())
             io_mask = io_filter(sentiment_df['headline'], sentiment_df['summary'])
             ec_mask = ec_filter(sentiment_df['headline'], sentiment_df['summary'])
 
@@ -180,14 +175,14 @@ class GSDatabase:
             sentiment_df['report_type'] = np.where(er_mask, 'Earning\'s Review', sentiment_df['report_type'])
             sentiment_df['report_type'] = np.where(ec_mask, 'Estimate Change', sentiment_df['report_type'])
             sentiment_df['report_type'] = np.where(io_mask, 'Initiation', sentiment_df['report_type'])
-            sentiment_df['report_type'] = np.where(tp_mask, 'Target Price Change', sentiment_df['report_type'])
+            sentiment_df['report_type'] = np.where(tpc_mask, 'Target Price Change', sentiment_df['report_type'])
             sentiment_df['report_type'] = np.where(rc_mask, 'Rating Change', sentiment_df['report_type'])
 
             DL.toDB(sentiment_df, f'Cormark sentiment.csv')
 
         logger.info('Updating database')
         # sentiment_df = DL.loadDB('Cormark sentiment.csv', parse_dates=['publish_date_and_time'])
-        sentiment_df = DL.loadDB('new_senti.csv', parse_dates=['publish_date_and_time'])
+        sentiment_df = DL.loadDB('new_senti7.csv', parse_dates=['publish_date_and_time'])
         if len(sentiment_df) == 0:
             sentiment_df = pd.DataFrame()
 
@@ -196,20 +191,17 @@ class GSDatabase:
             UM.get_url(driver, 'https://cormark-research.bluematrix.com/client/library.jsp?mode=search')
             self.cormark_login(driver)
 
-            type_lst = ['Research Report (Issuer)', 'Special Alert (Issuer)',
-                        'Emerging Ideas (Issuer)', 'Morning Note (Issuer)']
-
             status = 'y'
             while status == 'y':
-                input('Please navigate to Search page, and insert correct dates and report types:\n'
-                      'Research Report (Issuer), Special Alert (Issuer), Emerging Ideas (Issuer), Morning Note (Issuer)')
+                print('Please navigate to Search page, and insert correct dates and report types:\n'
+                      'Research Report (Issuer), Special Alert (Issuer), Emerging Ideas (Issuer), Morning Note (Issuer).')
+                status1 = 'n'
+                while status1 != 'y':
+                    status1 = input('Continue? [y/n]')
                 df = self.crawler(driver)
-                df['headline_senti'] = None
-                df['summary_senti'] = None
-
-                # Update TPC, RC
-                df[['tp_new', 'tp_prev', 'tp_chg', 'tp_chg_pct', 'abs(tp_chg)']] = None
-                df[['rating_new', 'rating_prev', 'rating_curr']] = None
+                df['headline_senti', 'summary_senti'] = None
+                df[['tp_curr', 'tp_prev', 'tp_chg', 'tp_chg_pct']] = None
+                df[['rating_prev', 'rating_curr']] = None
                 df[['report_type']] = ''
                 DL.toDB(df, 'new_df.csv')
                 df = DL.loadDB('new_df.csv', parse_dates=['publish_date_and_time'])
@@ -230,5 +222,5 @@ class GSDatabase:
 
 if __name__ == '__main__':
     GSD = GSDatabase()
-    # GSD.GS_update_sentiment(update=True)
-    GSD.GS_update_sentiment(update=False)
+    GSD.GS_update_sentiment(update=True)
+    # GSD.GS_update_sentiment(update=False)

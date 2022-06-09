@@ -42,7 +42,7 @@ def benchmark_rule2(df_):
 
 
 def benchmark_rule3(df_):
-    rating_num = {'Outperform': 1, 'Sector Performance': 0, 'Underperform': -1}
+    rating_num = {'buy': 1, 'market perform': 0, 'reduce': -1}
 
     df = df_[['rating_prev', 'rating_curr', 'side']].copy()
     df['rating_prev_num'] = df_['rating_prev'].map(rating_num)

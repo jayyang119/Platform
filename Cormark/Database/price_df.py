@@ -79,9 +79,9 @@ class GSPriceDf:
 
     def get_valid_tickers_dict(self):
         self._valid_tickers = DL.loadTickers()
-        self._valid_tickers_dict = self._valid_tickers.set_index('ticker_nbc').to_dict()
+        self._valid_tickers_dict = self._valid_tickers.set_index('Ticker(BBG)').to_dict()
 
-    def get_sentiment_df(self, file='NBC sentiment'):
+    def get_sentiment_df(self, file='Cormark sentiment'):
         logger.info(f'Getting {file}')
         df = DL.loadDB(f'{file}.csv', parse_dates=(['publish_date_and_time']))  # , parse_dates=(['publish_date_and_time'])
 
@@ -97,7 +97,7 @@ class GSPriceDf:
         for i, row in df.iterrows():
             try:
                 date = row['date_local']
-                ticker = row['ticker']
+                ticker = row['ticker'] + ' Equity'
                 data = DL.loadDaily(self._valid_tickers_dict['ticker'][ticker])
 
                 if len(data) == 0:
@@ -173,15 +173,14 @@ class GSPriceDf:
             input('Continue?')
 
             if update is True:
-                tickers_tbu = np.unique(price_df_tbu['ticker'].replace(self._valid_tickers_dict['ticker']))
-
+                tickers_tbu = np.unique((price_df_tbu['ticker'] + ' Equity').replace(self._valid_tickers_dict['ticker']))
+                # tickers_tbu = [x + ' Equity' for x in tickers_tbu]
                 # Add exchange rates, VIX, index, index futures
                 logger.info(tickers_tbu)
                 len_tickers_tbu = str(len(tickers_tbu))
                 order = input(f'Total length of tickers tbu {len_tickers_tbu}, continue? (y/n)')
                 if order.lower() == 'y':
                     Eikon_update_price_enhanced(tickers_tbu, threadcount=16)
-                # Eikon_update_price(tickers_tbu)
 
             price_df_tbu = self.update_price(price_df_tbu)
             logger.info(price_df_tbu)

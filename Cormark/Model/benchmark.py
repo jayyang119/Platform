@@ -333,17 +333,21 @@ if __name__ == '__main__':
     train_data, test_data = DC.get_benchmark_test_data()
     all_data = pd.concat([train_data, test_data], axis=0).reset_index(drop=True)
 
-    strategy = 'benchmark'
-    DL.toBT(all_data, strategy)
-    vis = visual(strategy)
-    vis.visual_job()
-    # plot_matrix('benchmark')
+    # plot_matrix('blind long')
+    # plot_matrix('blind short')
+
+    # strategy = 'benchmark'
+    # DL.toBT(all_data, strategy)
+    # vis = visual(strategy)
+    # vis.visual_job()
+    # plot_matrix(strategy)
     #
     # strategy = 'benchmark(pm random)'
     # after_pm = Engine.portfolio_management(all_data, random_pick=True)
     # DL.toBT(after_pm, strategy)
     # vis = visual(strategy)
     # vis.visual_job()
+    # plot_matrix(strategy)
     #
     # strategy = 'benchmark(pm scoring)'
     # after_scoring = benchmark_expectancy()
@@ -351,6 +355,7 @@ if __name__ == '__main__':
     # DL.toBT(after_scoring, strategy)
     # vis = visual(strategy)
     # vis.visual_job()
+    # plot_matrix(strategy)
 
     # plot_matrix('benchmark(pm)')
     # all_data['side'] = benchmark_rule(all_data)
@@ -442,7 +447,7 @@ if __name__ == '__main__':
     #
     # DL.toDB(test_data, 'Citi data Jan-Mar.csv')
 
-    simulation_result = simulation(range(1, 500), from_local=True)
+    simulation_result = simulation(range(1, 500), from_local=False)
     equity_curve_b, num_trades_b, hit_ratio_b, expectancy_b = simulation_datecleaning(simulation_result)
     fig = simulation_visualization(equity_curve_b, num_trades_b, hit_ratio_b, expectancy_b)
     fig.savefig(f'{DL.database_path}/Backtest/Simulation/Simulation ols.png')

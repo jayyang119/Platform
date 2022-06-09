@@ -60,7 +60,7 @@ def tpc_prev_scanner(summary_list: list) -> list:
         Scan target price from the summaries of the reports that are classified as Target Price Change.
     """
     tpc_list = []
-    r = re.compile(r'\b(?:pt|tp|target price|price target|sotp|target) from [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+) .*to [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
+    r = re.compile(r'\b(?:pt|tp|target price|price target|sotp|target) from [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+) .*to [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}\d*\.?\d+(?<!%)|'
                    r'\b(?:pt|tp|target price|price target|sotp|target) [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}\d*\.?\d+(?<!%) .*from [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
                    r'\b(?:pt|tp|target price|price target|sotp|target) of [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}\d*\.?\d+(?<!%) .*from [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
                    r'\b(?:pt|tp|target price|price target|sotp|target) to [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}\d*\.?\d+(?<!%) .*from [a-z]{0,3}[ ]{0,1}[\$|\€\£\¥]{0,1}(\d*\.?\d+)(?<!%)|'
@@ -74,7 +74,7 @@ def tpc_prev_scanner(summary_list: list) -> list:
                    , flags=re.I)
 
     count = 0
-    years_tbd = map(str, range(2019, 2031))
+    years_tbd = list(map(str, range(2019, 2031)))
 
     for summary in summary_list:
         summary = str(summary).replace(',', '')
@@ -87,7 +87,10 @@ def tpc_prev_scanner(summary_list: list) -> list:
                 # Store all the possible target prices for ARTIFICIAL intelligence to select
                 tpc_list.append(str(result))
             elif result[0] is not None:
-                tpc_list.append(str(result[0]))
+                if str(result[0]) not in years_tbd:
+                    tpc_list.append(str(result[0]))
+                else:
+                    tpc_list.append(np.nan)
             else:
                 tpc_list.append(np.nan)
         else:
@@ -103,11 +106,11 @@ def rating_scanner(summary_list: list, ticker_list: list) -> list:
     ticker_list = list(ticker_list)
     rating_list = []
 
-    rt_pattern = re.compile(r'\b([a-z]{1,7}) (?:rating|recommendation)|'
-                            r'\brating to ([a-z]{1,7})|'
-                            r'\b(?:affirm|reiterate|maintain|retain|reaffirm) ([a-z]{1,7})|'
-                            r'\b(?:affirm|reiterate|maintain|retain|reaffirm) our ([a-z]{1,7})|'
-                            r'\b(?:initiating) with ([a-z]{1,7})', flags=re.I)
+    rt_pattern = re.compile(r'\b(buy|market perform|reduce) (?:rating|recommendation)|'
+                            r'\brating to (buy|market perform|reduce)|'
+                            r'\b(?:affirm|reiterate|maintain|retain|reaffirm) (buy|market perform|reduce)|'
+                            r'\b(?:affirm|reiterate|maintain|retain|reaffirm) our (buy|market perform|reduce)|'
+                            r'\b(?:initiating) with (buy|market perform|reduce)', flags=re.I)
 
     for i in range(len(summary_list)):
         summary = summary_list[i]
@@ -116,12 +119,10 @@ def rating_scanner(summary_list: list, ticker_list: list) -> list:
             summary = ''
 
         summary = str(summary).replace(',', '').lower()
-        if 'rating' in summary:
-            result = rt_pattern.findall(summary)
-            result = list(np.unique([x for x in result if x != '' and x in ['neutral', 'buy', 'sell']]))
-
-        else:
-            result = []
+        # if 'rating' in summary:
+        result = rt_pattern.findall(summary)
+        result = [x for x in list(itertools.chain(*result)) if len(x) > 0]
+        result = list(np.unique([x for x in result if x != '' and x in ['buy', 'market perform', 'reduce']]))
 
         if len(result) > 1:
             print(ticker)
