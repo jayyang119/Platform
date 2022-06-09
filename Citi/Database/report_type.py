@@ -1,12 +1,3 @@
-import pandas as pd
-import numpy as np
-from database import GSDatabase
-from uti import timeit, DataLoader, Logger
-
-GSD = GSDatabase()
-DL = DataLoader()
-logger = Logger()
-
 def rc_filter(headline_list: list, summary_list: list) -> list:
     keywords = ['to outperform', 'to underperform', 'to market perform', 'to strong buy']
 
@@ -48,11 +39,3 @@ def ec_filter(headline_list, summary_list) -> list:
     headline_contains_ec = headline_list.apply(lambda x: x.lower()).str.contains('|'.join(headline_keywords))
 
     return headline_contains_ec | summary_contains_ec
-
-
-
-if __name__ == '__main__':
-
-
-    pass
-

@@ -7,7 +7,6 @@ from uti import DataLoader, Logger
 from library import Dataset
 from Model import DataCleaner, benchmark_expectancy
 from Broker import ricsregion
-from Backtest import BacktestEngine, get_expectancy
 from Crawler import REPORT_TYPE_GLOBAL_DICT
 
 DL = DataLoader()
@@ -269,58 +268,9 @@ class GSPriceDf:
 
 if __name__ == '__main__':
     GSP = GSPriceDf()
-    # df = GSP.GS_update_price_df(update=False)
 
-    # DL.toDB(df, 'price_df.csv')
-    # price_df = DL.loadDB('price_df.csv')
-    # price_df = ricsregion(price_df)
-    # DS = Dataset(price_df)
-    # DS.clean(mode='eikon')
-    # price_df = DS.df.copy(deep=True)
-    #
-    # DL.toDB(price_df, 'price_df_us.csv')
-
-    # GSP.GS_update_price_df(update=False)
-    # GSP.GS_update_price_df()
     if datetime.today().weekday() == 0:
         backfill_days = 3
     else:
         backfill_days = 1
     price_df = GSP.GS_predict_price_df(days=backfill_days)
-    # price_df = GSP.GS_predict_price_df(days=4)
-    # price_df = GSP.GS_predict_price_df(days=30)  # Catalyst watch case study
-    # import glob
-    # import json
-    # import flatten_json
-    # path = r"C:\Users\JayYang\OneDrive - Alpha Sherpa Capital\Citi\Database\*.json"
-    # files = glob.glob(path)
-    # citi = []
-    # for file in files:
-    #     f = open(file, encoding='utf8')
-    #     data = json.load(f)
-    #     data = data['list']
-    #     data = [flatten_json(each) for each in data]
-    #     df1 = pd.DataFrame(data)
-    #     citi.append(df1)
-    #     f.close()
-    #
-    # df = pd.concat(citi).reset_index(drop=True)
-    # df = df[['headline', 'pubDate', 'OBOPreferredName', 'synopsis',
-    #          'tickers', 'regions', 'sectors', 'company', 'assetClass',
-    #          'subject', 'pubId']]
-    # df = df.rename(columns={"pubDate": "Time",
-    #                         "OBOPreferredName": "Head analyst",
-    #                         "synopsis": "Summary",
-    #                         "tickers": "Ticker",
-    #                         "subject": "report_type",
-    #                         "headLine": "Headline",
-    #                         "regions": "Region",
-    #                         "sectors": "Industry"
-    #                         })
-    #
-    # df = df.dropna(subset=['ticker'])
-    # df['ticker'] = df['ticker'].apply(lambda x: x.split(',')[0])
-    # Eikon_update_price_enhanced(df['ticker'].unique())
-
-
-

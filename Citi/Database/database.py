@@ -44,16 +44,8 @@ class GSDatabase:
             return 'ad-hoc'
         return 'ad-hoc'
 
-    @timeit
-    def GS_update_sentiment(self, update=True):
-        logger.info('Updating database')
-        sentiment_df = DL.loadDB('Citi sentiment.csv', parse_dates=['Date', 'Time'])
-        if update:
-            path = f"{DATABASE_PATH}/*.json"
-        else:
-            path = f"{DATABASE_PATH}/citi json/*.json"
+    def json_to_df(self, path):
         files = glob.glob(path)
-        print(files)
         citi = []
         for file in files:
             with open(file, encoding='utf8') as f:
@@ -95,8 +87,11 @@ class GSDatabase:
         df['ticker'] = df['tickers'].apply(lambda x: x.split(',')[0])
         df.loc[df['Region'] == 'Japan', 'ticker'] = df.loc[df['Region'] == 'Japan', 'ticker'].apply(lambda x: x+'.T' if len(x) == 4 else x)  # Japan tickers
 
-        logger.info(df)
-        # Update TPC, RC
+        return df
+
+
+    @timeit
+    def GS_update_sentiment(self, update=True):
         """
         0. Sort by Ticker, Date first.
         1. TPC scanner
@@ -104,6 +99,14 @@ class GSDatabase:
         3. Prev Target Price
         4. Target Price Change
         """
+
+        logger.info('Updating database')
+        sentiment_df = DL.loadDB('Citi sentiment.csv', parse_dates=['Date', 'Time'])
+        if update:
+            path = f"{DATABASE_PATH}/*.json"
+        else:
+            path = f"{DATABASE_PATH}/citi json/*.json"
+        df = self.json_to_df(path)
         df[['TPS_new', 'tp_curr', 'tp_prev', 'tp_chg', 'tp_chg_pct', 'abs(tp_chg)', 'RC_upgrade', 'RC_downgrade', 'rating_new']] = None
         df[['rating_prev', 'rating_curr', 'RC_upgrade', 'RC_downgrade']] = ''
         if len(sentiment_df) == 0:
@@ -121,18 +124,16 @@ class GSDatabase:
             sentiment_df.loc[sentiment_df['summary_senti'].isna(), 'summary_senti'], _ = update_sentiment(sentiment_df.loc[sentiment_df['summary_senti'].isna(), 'summary'])
 
             new_df = sentiment_df.loc[sentiment_df['rating_curr'].isna() | sentiment_df['tp_curr'].isna()].reset_index(drop=True).copy()
-            # sentiment_df = sentiment_df.loc[~sentiment_df['headline_senti'].isna() & ~sentiment_df_duplicated['rating_new'].isna() & ~sentiment_df_duplicated['TPS_new'].isna()].reset_index(drop=True)
 
         if len(new_df) > 0:
-            # Update sentiment
-            # Update target prices, ratings, rating changes
+            # Update sentiment, target prices, ratings, rating changes
             TPC_mask = new_df['report_types'].fillna('').str.contains('Target Price Change') & new_df['TPS_new'].isna()
             if TPC_mask.any():
                 tpc_list = tpc_scanner(new_df[TPC_mask].reset_index()['summary'])
                 new_df.loc[TPC_mask, 'TPS_new'] = tpc_list
 
-            RC_mask = new_df['report_types'].fillna('').str.contains('Rating Change') & ~new_df['tickers'].fillna('').str.contains(',') & new_df['rating_new'].isna()
             # Rating change
+            RC_mask = new_df['report_types'].fillna('').str.contains('Rating Change') & ~new_df['tickers'].fillna('').str.contains(',') & new_df['rating_new'].isna()
             if RC_mask.any():
                 rc_list, rc_list_real = rc_scanner(new_df[RC_mask]['summary'])
                 new_df.loc[RC_mask, 'RC_upgrade'] = np.array(rc_list)[:, 0]
@@ -156,11 +157,8 @@ class GSDatabase:
         sentiment_df_tbu = sentiment_df[sentiment_df['TPS_new'].fillna('').str.contains('\[').fillna(False)].copy().reset_index(drop=True)
         sentiment_df = sentiment_df[~sentiment_df['TPS_new'].fillna('').str.contains('\[').fillna(False)]
         for i, row in sentiment_df_tbu.iterrows():
-            print()
-            print(row['ticker'])
-            print(row['tickers'])
-            print(row['summary'])
-            print()
+            print(row['ticker'], row['tickers'])
+            print(row['summary'], '\n')
             tp = input(f'Please insert the real target prices mannually, thanks. If no target price this is a sector report for multiple tickers'
                         ' just press Enter...')
             if len(tp) != 0:
@@ -212,5 +210,3 @@ class GSDatabase:
 if __name__ == '__main__':
     GSD = GSDatabase()
     GSD.GS_update_sentiment(update=True)
-
-

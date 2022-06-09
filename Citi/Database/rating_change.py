@@ -42,6 +42,7 @@ def tpc_scanner(summary_list: list) -> list:
             if len(np.unique(result)) > 1:
                 # Store all the possible target prices for ARTIFICIAL intelligence to select
                 tpc_list.append(str(result))
+                count += 1
             elif result[0] is not None:
                 tpc_list.append(str(result[0]))
             else:
@@ -49,7 +50,7 @@ def tpc_scanner(summary_list: list) -> list:
         else:
             tpc_list.append(np.nan)
 
-    logger.info(f'Total number of {count} of TPC needs to modify with the help of ARTIFICIAL intelligence.')
+    logger.info(f'Total number of {count} of tp_curr needs to modify with the help of ARTIFICIAL intelligence.')
 
     return tpc_list
 
@@ -74,6 +75,7 @@ def rating_scanner(summary_list: list, ticker_list: list) -> list:
         summary = str(summary).replace(',', '').lower()
         if 'rating' in summary:
             result = rt_pattern.findall(summary)
+            result = [x for x in list(itertools.chain(*result)) if len(x) > 0]
             result = list(np.unique([x for x in result if x != '' and x in ['neutral', 'buy', 'sell']]))
 
         else:
@@ -143,12 +145,6 @@ def rc_scanner(summary_list: list) -> list:
     return rc, rc_list
 
 if __name__ == '__main__':
-    # price_df = DL.loadDB('price_df.csv', parse_dates=['Date', 'Time'])
-    # tpc_df8 = DL.loadDB('tpc_df8.csv', parse_dates=['Date', 'Time'])
-    #
-    # tpc_df = price_df.loc[~price_df.index.isin(tpc_df8.index)]
-    # tpc_df = tpc_df[tpc_df['report_types'].fillna('').str.contains('Target Price Change')]
-    # tpc_df_blank = tpc_df.copy()
 
     senti = DL.loadDB('Citi sentiment.csv', parse_dates=['Date'])
     senti = senti[senti['Date'] == max(senti['Date'])]
