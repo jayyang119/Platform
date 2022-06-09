@@ -122,7 +122,7 @@ def rc_scanner(summary_list: list) -> list:
             if 'downgrad' not in summary:
                 result = ug_pattern.findall(summary)
             else:
-                print(summary)
+                print('\n', summary, '\n')
                 curr_rating = input('Please manually check for current ratings, if unfound or multiple tickers, please press Enter:')
                 rc_list.append(curr_rating)
                 continue
