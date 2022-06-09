@@ -44,6 +44,7 @@ def tpc_scanner(summary_list: list) -> list:
             if len(np.unique(result)) > 1:
                 # Store all the possible target prices for ARTIFICIAL intelligence to select
                 tpc_list.append(str(result))
+                count += 1
             elif result[0] is not None:
                 tpc_list.append(str(result[0]))
             else:
@@ -51,7 +52,7 @@ def tpc_scanner(summary_list: list) -> list:
         else:
             tpc_list.append(np.nan)
 
-    logger.info(f'Total number of {count} of TPC needs to modify with the help of ARTIFICIAL intelligence.')
+    logger.info(f'Total number of {count} of tp_curr needs to modify with the help of ARTIFICIAL intelligence.')
 
     return tpc_list
 
@@ -86,6 +87,7 @@ def tpc_prev_scanner(summary_list: list) -> list:
             if len(np.unique(result)) > 1:
                 # Store all the possible target prices for ARTIFICIAL intelligence to select
                 tpc_list.append(str(result))
+                count += 1
             elif result[0] is not None:
                 if str(result[0]) not in years_tbd:
                     tpc_list.append(str(result[0]))
@@ -96,7 +98,7 @@ def tpc_prev_scanner(summary_list: list) -> list:
         else:
             tpc_list.append(np.nan)
 
-    logger.info(f'Total number of {count} of TPC needs to modify with the help of ARTIFICIAL intelligence.')
+    logger.info(f'Total number of {count} of tp_prev needs to modify with the help of ARTIFICIAL intelligence.')
 
     return tpc_list
 

@@ -39,11 +39,3 @@ def ec_filter(headline_list, summary_list) -> list:
     headline_contains_ec = headline_list.apply(lambda x: x.lower()).str.contains('|'.join(headline_keywords))
 
     return headline_contains_ec | summary_contains_ec
-
-
-
-if __name__ == '__main__':
-    
-
-    pass
-

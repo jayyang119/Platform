@@ -115,78 +115,81 @@ class GSDatabase:
 
         return df
 
+    def update_sentiment_df(self, df):
+        for senti_col in ['headline_senti', 'summary_senti']:
+            print(senti_col)
+            senti_empty_mask = df[senti_col].isna()
+            senti = senti_col.replace('_senti', '')
+            df.loc[senti_empty_mask, senti_col], _ = update_sentiment(
+                df.loc[senti_empty_mask, senti].fillna(''))
+
+        # Update target prices, ratings, rating changes
+        TPC_mask = df['tp_curr'].isna()
+        TPC_prev_mask = df['tp_prev'].isna()
+        RATING_mask = df['rating_curr'].isna()
+        if TPC_mask.any():
+            tpc_list = tpc_scanner(df[TPC_mask]['summary'])
+            df.loc[TPC_mask, 'tp_curr'] = tpc_list
+        if TPC_prev_mask.any():
+            tpc_list = tpc_prev_scanner(df[TPC_mask]['summary'])
+            df.loc[TPC_prev_mask, 'tp_prev'] = tpc_list
+        if RATING_mask.any():
+            rating_list = rating_scanner(df.loc[RATING_mask, 'summary'], df.loc[RATING_mask, 'ticker'])
+            df.loc[RATING_mask, 'rating_curr'] = rating_list
+
+        df = pd.concat([df.loc[TPC_mask|RATING_mask|TPC_prev_mask, df.columns], df], axis=0). \
+            sort_values('publish_date_and_time', ascending=False). \
+            drop_duplicates(['publish_date_and_time', 'uid'], keep='first').reset_index(drop=True)
+        df = df.sort_values(['publish_date_and_time'], ascending=True).reset_index(drop=True)
+
+        # Clean target prices mannually with Artificial Intelligence
+        for tp_tbu in ['tp_curr', 'tp_prev']:
+            tp_tbu_mask = df[tp_tbu].fillna('').str.contains('\[').fillna(False)
+            for i, row in df[tp_tbu_mask].iterrows():
+                print(row['ticker'])
+                print(row['summary'], '\n')
+                tp = input(
+                    f'Please insert the real {tp_tbu} mannually, thanks. If no target price this is a sector report for multiple tickers just press Enter...')
+                if len(tp) != 0:
+                    df.loc[i, tp_tbu] = float(tp)
+                else:
+                    df.loc[i, tp_tbu] = ''
+
+        df['tp_curr'] = df.groupby(['ticker'])['tp_curr'].apply(lambda x: x.fillna(method='ffill'))
+        tpc_mask = (df['tp_curr'] > df['tp_prev']) | (df['tp_curr'] < df['tp_prev'])
+        df.loc[tpc_mask, 'tp_chg'] = df.loc[tpc_mask, 'tp_curr'] - df.loc[tpc_mask, 'tp_prev']
+        df['tp_chg_pct'] = df['tp_chg'] / df['tp_curr']
+        df['rating_curr'] = df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.fillna(method='ffill'))
+        df['rating_prev'] = df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.shift())
+
+        # Define report types
+        er_mask = er_filter(df['headline'], df['summary'])
+        rc_mask = (df['rating_curr'] != df['rating_prev']) &\
+                  (~df['rating_curr'].isna()) & (~df['rating_prev'].isna())
+        io_mask = io_filter(df['headline'], df['summary'])
+        ec_mask = ec_filter(df['headline'], df['summary'])
+
+        df['report_type'] = 'ad-hoc'
+        df['report_type'] = np.where(er_mask, 'Earning\'s Review', df['report_type'])
+        df['report_type'] = np.where(ec_mask, 'Estimate Change', df['report_type'])
+        df['report_type'] = np.where(io_mask, 'Initiation', df['report_type'])
+        df['report_type'] = np.where(tpc_mask, 'Target Price Change', df['report_type'])
+        df['report_type'] = np.where(rc_mask, 'Rating Change', df['report_type'])
+
+        return df
+
+
     @timeit
     def GS_update_sentiment(self, update=True):
-        def update_sentiment_df(sentiment_df):
-            for senti_col in ['headline_senti', 'summary_senti']:
-                print(senti_col)
-                senti_empty_mask = sentiment_df[senti_col].isna()
-                sentiment_df.loc[senti_empty_mask, senti_col], _ = update_sentiment(
-                    sentiment_df.loc[senti_empty_mask, senti_col.rstrip('_senti')].fillna(''))
-
-            # Update target prices, ratings, rating changes
-            TPC_mask = sentiment_df['tp_curr'].isna()
-            TPC_prev_mask = sentiment_df['tp_prev'].isna()
-            RATING_mask = sentiment_df['rating_curr'].isna()
-            # tpc_prev_scanner
-            if TPC_mask.any():
-                tpc_list = tpc_scanner(sentiment_df[TPC_mask]['summary'])
-                sentiment_df.loc[TPC_mask, 'tp_curr'] = tpc_list
-            if TPC_prev_mask.any():
-                tpc_list = tpc_prev_scanner(sentiment_df[TPC_mask]['summary'])
-                sentiment_df.loc[TPC_prev_mask, 'tp_prev'] = tpc_list
-            if RATING_mask.any():
-                rating_list = rating_scanner(sentiment_df.loc[RATING_mask, 'summary'], sentiment_df.loc[RATING_mask, 'ticker'])
-                sentiment_df.loc[RATING_mask, 'rating_curr'] = rating_list
-
-            sentiment_df = pd.concat([sentiment_df.loc[TPC_mask|RATING_mask|TPC_prev_mask, sentiment_df.columns], sentiment_df], axis=0). \
-                sort_values('publish_date_and_time', ascending=False). \
-                drop_duplicates(['publish_date_and_time', 'uid'], keep='first').reset_index(drop=True)
-            sentiment_df = sentiment_df.sort_values(['publish_date_and_time'], ascending=True).reset_index(drop=True)
-
-            # Clean target prices mannually with Artificial Intelligence
-            for tp_tbu in ['tp_curr', 'tp_prev']:
-                tp_tbu_mask = sentiment_df[tp_tbu].fillna('').str.contains('\[').fillna(False)
-                for i, row in sentiment_df[tp_tbu_mask].iterrows():
-                    print(row['ticker'])
-                    print(row['summary'], '\n')
-                    tp = input(
-                        f'Please insert the real {tp_tbu} mannually, thanks. If no target price this is a sector report for multiple tickers just press Enter...')
-                    if len(tp) != 0:
-                        sentiment_df.loc[i, tp_tbu] = float(tp)
-                    else:
-                        sentiment_df.loc[i, tp_tbu] = ''
-
-            sentiment_df['tp_curr'] = sentiment_df.groupby(['ticker'])['tp_curr'].apply(lambda x: x.fillna(method='ffill'))
-            tpc_mask = (sentiment_df['tp_curr'] > sentiment_df['tp_prev']) | (sentiment_df['tp_curr'] < sentiment_df['tp_prev'])
-            sentiment_df.loc[tpc_mask, 'tp_chg'] = sentiment_df.loc[tpc_mask, 'tp_curr'] - sentiment_df.loc[tpc_mask, 'tp_prev']
-            sentiment_df['tp_chg_pct'] = sentiment_df['tp_chg'] / sentiment_df['tp_curr']
-            sentiment_df['rating_curr'] = sentiment_df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.fillna(method='ffill'))
-            sentiment_df['rating_prev'] = sentiment_df.groupby(['ticker'])['rating_curr'].apply(lambda x: x.shift())
-
-            # Define report types
-            er_mask = er_filter(sentiment_df['headline'], sentiment_df['summary'])
-            rc_mask = (sentiment_df['rating_curr'] != sentiment_df['rating_prev']) &\
-                      (~sentiment_df['rating_curr'].isna()) & (~sentiment_df['rating_prev'].isna())
-            io_mask = io_filter(sentiment_df['headline'], sentiment_df['summary'])
-            ec_mask = ec_filter(sentiment_df['headline'], sentiment_df['summary'])
-
-            sentiment_df['report_type'] = 'ad-hoc'
-            sentiment_df['report_type'] = np.where(er_mask, 'Earning\'s Review', sentiment_df['report_type'])
-            sentiment_df['report_type'] = np.where(ec_mask, 'Estimate Change', sentiment_df['report_type'])
-            sentiment_df['report_type'] = np.where(io_mask, 'Initiation', sentiment_df['report_type'])
-            sentiment_df['report_type'] = np.where(tpc_mask, 'Target Price Change', sentiment_df['report_type'])
-            sentiment_df['report_type'] = np.where(rc_mask, 'Rating Change', sentiment_df['report_type'])
-
-            DL.toDB(sentiment_df, f'Cormark sentiment.csv')
-
         logger.info('Updating database')
-        # sentiment_df = DL.loadDB('Cormark sentiment.csv', parse_dates=['publish_date_and_time'])
-        sentiment_df = DL.loadDB('new_senti7.csv', parse_dates=['publish_date_and_time'])
+        sentiment_df = DL.loadDB('Cormark sentiment.csv', parse_dates=['publish_date_and_time'])
         if len(sentiment_df) == 0:
             sentiment_df = pd.DataFrame()
 
-        if update:
+        if not update:
+            self.update_sentiment_df(sentiment_df)
+            DL.toDB(sentiment_df, f'Cormark sentiment.csv')
+        else:
             driver = UM.start_browser()
             UM.get_url(driver, 'https://cormark-research.bluematrix.com/client/library.jsp?mode=search')
             self.cormark_login(driver)
@@ -197,9 +200,10 @@ class GSDatabase:
                       'Research Report (Issuer), Special Alert (Issuer), Emerging Ideas (Issuer), Morning Note (Issuer).')
                 status1 = 'n'
                 while status1 != 'y':
-                    status1 = input('Continue? [y/n]')
+                    status1 = input('Continue? [y/n]').lower()
+                searchweb_url = driver.current_url
                 df = self.crawler(driver)
-                df['headline_senti', 'summary_senti'] = None
+                df[['headline_senti', 'summary_senti']] = None
                 df[['tp_curr', 'tp_prev', 'tp_chg', 'tp_chg_pct']] = None
                 df[['rating_prev', 'rating_curr']] = None
                 df[['report_type']] = ''
@@ -209,16 +213,14 @@ class GSDatabase:
                 if len(sentiment_df) == 0:
                     sentiment_df = df.copy()
                 else:
-                    new_cols = set(df.columns) - set(sentiment_df.columns)
-                    for col in new_cols:
-                        sentiment_df[col] = None
                     sentiment_df = pd.concat([sentiment_df, df[sentiment_df.columns]], axis=0).drop_duplicates(
-                        ['publish_date_and_time', 'uid'])
+                        ['publish_date_and_time', 'uid'], keep='first').reset_index(drop=True)
 
-                update_sentiment_df(sentiment_df)
-                status = input('Continue scraping? [y/n]')
-        else:
-            update_sentiment_df(sentiment_df)
+                sentiment_df = self.update_sentiment_df(sentiment_df)
+                DL.toDB(sentiment_df, f'Cormark sentiment.csv')
+                UM.get_url(driver, searchweb_url)
+                status = input('Continue scraping (Please refresh the search page)? [y/n]').lower()
+
 
 if __name__ == '__main__':
     GSD = GSDatabase()
