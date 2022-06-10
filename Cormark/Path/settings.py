@@ -1,16 +1,6 @@
 path = __file__
-if 'jayyang' in path:
-    path_len = 2
-else:
-    path_len = 3
-
-if '\\' in path:
-    BASE_PATH = '/'.join(path.split("\\")[:path_len])
-else:
-    BASE_PATH = '/'.join(path.split("/")[:path_len])
-
-
-ONEDRIVE_PATH = BASE_PATH + "/OneDrive - Alpha Sherpa Capital"
+BASE_PATH = "C:/Users/JayYang"
+ONEDRIVE_PATH = f"{BASE_PATH}/OneDrive - Alpha Sherpa Capital"
 PLATFORM_PATH = f"{BASE_PATH}/Platform"
 DAILY_PATH = f"{ONEDRIVE_PATH}/Daily"
 DATABASE_PATH = f"{ONEDRIVE_PATH}/Database/Cormark"
