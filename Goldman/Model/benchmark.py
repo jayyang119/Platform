@@ -25,7 +25,7 @@ DL = DataLoader()
 DATABASE_PATH = DL.database_path
 DC = DataCleaner()
 Engine = backtest_engine()
-lr = LR()
+
 
 
 def benchmark_expectancy(sort_by='exch_location', train_data=None, test_data=None):
@@ -208,7 +208,7 @@ def simulation(range_of_test=range(10), from_local=False, exclude=[]):
             testing_data = dfall_5DR.loc[dfall_5DR['Date'].isin(testing_date)].copy(deep=True)
 
             daily_trade, elements_name = get_daily_trade(training_data, testing_data)
-            model = lr(daily_trade[elements_name], daily_trade[['d0_r']])
+            model = LR(daily_trade[elements_name], daily_trade[['d0_r']])
             model.train()
             model.evaluate()
             # intercept = -0.03506858
