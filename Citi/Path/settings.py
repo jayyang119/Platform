@@ -2,7 +2,7 @@ path = __file__
 BASE_PATH = "C:/Users/JayYang"
 ONEDRIVE_PATH = f"{BASE_PATH}/OneDrive - Alpha Sherpa Capital"
 PLATFORM_PATH = f"{BASE_PATH}/Platform"
-DAILY_PATH = f"{ONEDRIVE_PATH}/Daily"
+DAILY_PATH = f"{ONEDRIVE_PATH}/Database/Daily"
 DATABASE_PATH = f"{ONEDRIVE_PATH}/Database/Citi"
 
 print(__file__, path)

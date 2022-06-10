@@ -88,7 +88,7 @@ def benchmark_expectancy(train_data=None, test_data=None):
     test_data['side'] = benchmark_rule(test_data)
     test_data['side'] = benchmark_rule2(test_data)
     test_data['side'] = benchmark_rule3(test_data)
-    # test_data['side'] = test_data['side'].replace('neutral', '')
+    test_data['side'] = test_data['side'].replace('neutral', '')
     train_data, test_data, elements_name = get_daily_trade(train_data, test_data)  # Calculate factor scores
 
     model = LR(train_data[elements_name], train_data[['d0_r']])
@@ -97,15 +97,14 @@ def benchmark_expectancy(train_data=None, test_data=None):
     intercept, ols_weights = model.get_params()
 
     # Scoring: in Americas use OLS, in Asia and Europe use simple average.
-    us_mask = (test_data['exch_region'] == 'Americas')
     test_data['ols_score'] = np.sum(ols_weights * test_data[elements_name], axis=1) + intercept[0]
     test_data['mean_score'] = np.mean(test_data[elements_name], axis=1)
-    test_data['score'] = np.where(us_mask, test_data['ols_score'], test_data['mean_score'])
+    test_data['d0_exp'] = test_data['ols_score']
     test_data.loc[test_data['score'] <= 0, 'side'] = ''
     test_data.loc[test_data['score'] <= 0, 'score'] = 0
     test_data.loc[~test_data['side'].isin(['long', 'short']), 'score'] = 0
 
-    test_data['d0_exp'] = np.where(us_mask, test_data['ols_score'], test_data['mean_score'])
+    # test_data['d0_exp'] = np.where(us_mask, test_data['ols_score'], test_data['mean_score'])
     ###########################################################################
 
     ############################ Other Scores #################################

@@ -246,10 +246,10 @@ class GSPriceDf:
         results['up_or_down_side_pct'] = ''
         results['d1_exp'] = ''
         results['d2_exp'] = ''
-        results['broker'] = 'NBC'
+        results['broker'] = 'Cormark'
 
         results['ticker'] = results['ticker'].replace(self._valid_tickers_dict['ticker'])
-        results['Ticker(BBG)'] = results['ticker'].replace(self._valid_tickers_dict['Ticker(BBG)'])
+        results['Ticker(BBG)'] = results['ticker']  #.replace(self._valid_tickers_dict['Ticker(BBG)'])
         results['report_type_global'] = results['report_type'].replace(REPORT_TYPE_GLOBAL_DICT)
 
         results = results[
@@ -260,7 +260,7 @@ class GSPriceDf:
              'top_analyst_long', 'top_analyst_short', 'analyst_pri', 'exch_location', 'exch_region', 'ticker', 'publish_date_and_time', 'market_cap_grp',
              'analyst_pri_score', 'ticker_score', 'release_period_score', 'report_type_score']]
 
-        DL.toDB(results, f'NBC daily prediction {today_str}.csv')
+        DL.toDB(results, f'Cormark daily prediction {today_str}.csv')
 
         return results
 

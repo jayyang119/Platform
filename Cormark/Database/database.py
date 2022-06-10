@@ -147,10 +147,10 @@ class GSDatabase:
         TPC_prev_mask = df['tp_prev'].isna()
         RATING_mask = df['rating_curr'].isna()
         if TPC_mask.any():
-            tpc_list = tpc_scanner(df[TPC_mask]['summary'])
+            tpc_list = tpc_scanner(df.loc[TPC_mask, 'summary'])
             df.loc[TPC_mask, 'tp_curr'] = tpc_list
         if TPC_prev_mask.any():
-            tpc_list = tpc_prev_scanner(df[TPC_mask]['summary'])
+            tpc_list = tpc_prev_scanner(df.loc[TPC_prev_mask, 'summary'])
             df.loc[TPC_prev_mask, 'tp_prev'] = tpc_list
         if RATING_mask.any():
             rating_list = rating_scanner(df.loc[RATING_mask, 'summary'], df.loc[RATING_mask, 'ticker'])
@@ -172,9 +172,11 @@ class GSDatabase:
                 if len(tp) != 0:
                     df.loc[i, tp_tbu] = float(tp)
                 else:
-                    df.loc[i, tp_tbu] = ''
-
+                    df.loc[i, tp_tbu] = np.nan
+        logger.info('176')
         df['tp_curr'] = df.groupby(['ticker'])['tp_curr'].apply(lambda x: x.fillna(method='ffill'))
+        df['tp_curr'] = df['tp_curr'].astype(float)
+        df['tp_prev'] = df['tp_prev'].astype(float)
         tpc_mask = (df['tp_curr'] > df['tp_prev']) | (df['tp_curr'] < df['tp_prev'])
         df.loc[tpc_mask, 'tp_chg'] = df.loc[tpc_mask, 'tp_curr'] - df.loc[tpc_mask, 'tp_prev']
         df['tp_chg_pct'] = df['tp_chg'] / df['tp_curr']
