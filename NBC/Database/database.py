@@ -1,5 +1,5 @@
 from uti import timeit, DataLoader, Logger, UrlManager, By
-from Path import ONEDRIVE_PATH
+from Path import DATABASE_PATH
 from collections import defaultdict
 from Database.report_type import rc_filter, er_filter, io_filter, ec_filter
 
@@ -19,12 +19,12 @@ logger = Logger()
 UM = UrlManager()
 
 @timeit
-def update_sentiment(headline, base_path=os.path.join(ONEDRIVE_PATH, 'finBERT')):
+def update_sentiment(headline, base_path=os.path.join(DATABASE_PATH, 'finBERT')):
     """
         This function clears gpu memory cache and returns the finBERT's predicted sentiments given a list of sentences.
     """
-    if ONEDRIVE_PATH not in sys.path:
-        sys.path.append(ONEDRIVE_PATH)
+    if DATABASE_PATH not in sys.path:
+        sys.path.append(DATABASE_PATH)
     from finBERT import get_sentiments_finbert  # Temporarily, exploring a new way to import from outer project directory
 
     torch.cuda.empty_cache()
