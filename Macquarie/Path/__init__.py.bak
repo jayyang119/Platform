@@ -3,5 +3,4 @@ from Path.settings import (ONEDRIVE_PATH,
                            BASE_PATH,
                            DAILY_PATH,
                            PLATFORM_PATH,
-                           FINBERT_PATH,
-                           CODE_PATH)
+                           FINBERT_PATH)
