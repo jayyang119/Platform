@@ -1,0 +1,24 @@
+
+Within each platform directory, the viable commands are:
+
+- python main.py --task=database_update
+	Updates the sentiment data, (e.g. GS_sentiment.csv in Goldman).
+
+- python main.py --task=price_df_predict
+	Generate scores and predictions for the platform reports ready to trade.
+	
+- python main.py --task=price_df_predict --day=3
+	Generate predictions for the platform reports published in the past three days.
+
+- python main.py --task=price_df
+	Update price_df.csv without calling Eikon api to download market data.
+	
+- python main.py --task=price_df
+	Update price_df.csv without calling Eikon api to download market data.
+	
+
+	
+
+
+
+
